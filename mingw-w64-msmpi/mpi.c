@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 	args[i++] = GetEnvironmentVariable(E, comp, SZ) > 0 ? comp : C;
 	args[i++] = ipath;
 #if 0
-// Not needed for anymore MS-MPI 10+
+// Not needed anymore for MS-MPI 10+
 #ifdef FC
 	args[i++] = "-fno-range-check";
 #else	
