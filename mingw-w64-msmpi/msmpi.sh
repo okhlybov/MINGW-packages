@@ -15,7 +15,7 @@ sha256sums=(
 )
 
 if [[ $MSYSTEM_CARCH != "x86_64" ]]; then 
-	echo "ERROR: this scripts requires 64-bit MSYS2 environment"
+	echo "ERROR: this script requires 64-bit MSYS2 environment"
 	exit 1
 fi
 
@@ -56,5 +56,5 @@ rootdir=`pwd`
 	cat x86/mpifptr.h | tr -d '\015' > "$rootdir/mpifptr.h.i686"
 )
 
-# Export file signatures to be embed into PKGBUILD in order to ensure build integrity
+# Export file signatures to be embeded into PKGBUILD in order to ensure build integrity
 ruby export.rb mpi.c mpi.h mpif.h mpi.f90 mpifptr.h.{x86_64,i686} msmpi.def.{x86_64,i686}
