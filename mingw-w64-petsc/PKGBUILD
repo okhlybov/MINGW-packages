@@ -4,52 +4,90 @@ _realname=petsc
 
 pkgbase=mingw-w64-${_realname}
 pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-${_realname}-build")
-pkgver=3.8.4
+pkgver=3.13.0
 pkgrel=1
 arch=('any')
 pkgdesc="Sparse iterative (non)linear solver package (mingw-w64)"
-depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-openblas")
-makedepends=("python2" "${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-lapack" "${MINGW_PACKAGE_PREFIX}-openblas")
+depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas")
+makedepends=("python2" "${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-gcc-fortran" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-lapack" "${MINGW_PACKAGE_PREFIX}-openblas")
 options=('strip' 'staticlibs')
 license=('2-clause BSD')
 url="https://www.mcs.anl.gov/petsc/"
 source=("http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/${_realname}-lite-${pkgver}.tar.gz")
 noextract=("${_realname}-lite-${pkgver}.tar.gz")
-sha256sums=('4b511f4dc6ae1972b8c3d25673bc2b1262775df703728fa57522b2ddf14b13b8')
+sha256sums=('f0ea543a54145c5d1387e25b121c3fd1b1ca834032c5a33f6f1d929e95bdf0e5')
+
+# Bash tarball extractor function which replaces symlinks with real copies.
+# Useful for platforms which do not handle symlinks well, such as MSYS(2).
+untar() {
+  case "$1" in
+    *.tar)
+      u=
+      ;;
+    *.tar.gz|*.tgz)
+      u=z
+      ;;
+    *.tar.bz|*.tar.bz2|*.tbz2|*.tbz)
+      u=j
+      ;;
+    *.tar.xz|*.txz)
+      u=J
+      ;;
+    *)
+      exit -1
+      ;;
+  esac
+
+  tar x${u}f $1 2> /dev/null || true
+
+  ifs=$IFS
+  IFS=$'\n'
+  for s in `tar tv${u}f $1 | grep '^l.*->' -`; do
+    IFS=' ' read -r -a f <<< "$s"
+    dst="${f[8]}"
+    src=`dirname "$dst"`/"${f[10]}"
+    cp -r "$src" "$dst"
+  done
+  IFS=$ifs
+}
 
 prepare() {
   mkdir -p $srcdir/build-${MINGW_CHOST} && cd $srcdir/build-${MINGW_CHOST}
-  tar xzf $srcdir/../${_realname}-lite-${pkgver}.tar.gz # bsdtar fails to extract tarballs with symlinks
+  untar $srcdir/../${_realname}-lite-${pkgver}.tar.gz # bsdtar fails to extract tarballs with symlinks
   cd ${_realname}-${pkgver}
   for p in ${srcdir}/../*.patch; do
     patch -p1 < $p
   done
 }
 
-builds="dso dmo zso zmo"
+builds="dso dto dmo zso zto zmo"
 
 build() {
   cd  ${srcdir}/build-${MINGW_CHOST}/${_realname}-${pkgver}
   for build in ${builds}; do
-    opts="--disable-shared --with-single-library=0 --with-pthread=0 --with-windows-graphics=0 --with-x=0"
+    opts="--with-single-library=0 --disable-shared --with-windows-graphics=0 --with-x=0 --with-openblas=1"
+    ld=gcc
     case ${build} in
       ?m?)
-        opts="$opts --with-mpi=1 --with-mpi-compilers=1"
-		ld=mpicc
+        opts="$opts --with-mpi=1 --with-mpi-compilers=1 --with-pthread=0 --with-openmp=0"
+		    ld=mpicc
       ;;
       ?s?)
-        opts="$opts --with-mpi=0"
-		ld=gcc
-      ;;
+        opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=0"
+        ;;
+      ?t?)
+        opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=1"
+        ldflags=-fopenmp
+        ;;
     esac
-	case ${build} in
-	  z*|d*)
-		opts="$opts --with-precision=double"
-	  ;;
-	  c*|s*)
-		opts="$opts --with-precision=single"
-	  ;;
-	esac
+  	case ${build} in
+  	  z*|d*)
+  		opts="$opts --with-precision=double"
+  	  ;;
+  	  c*|s*)
+  		opts="$opts --with-precision=single"
+  	  ;;
+  	esac
     case ${build} in
       d*|s*)
         opts="$opts --with-scalar-type=real"
@@ -67,17 +105,17 @@ build() {
       ;;
     esac
     export PETSC_DIR=`pwd`
-    /usr/bin/python2 configure --PETSC_ARCH=${build} ${opts} \
-		CFLAGS="${CFLAGS}" FFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" MAKEFLAGS="${MAKEFLAGS}"
+    python2 configure --PETSC_ARCH=${build} ${opts} \
+      CFLAGS="${CFLAGS}" FFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" MAKEFLAGS="${MAKEFLAGS}"
     make PETSC_ARCH=${build} all
-	(
-		cd ${build}/lib
-		lib=libpetsc-${build}
-		rm -rf ${lib}.a
-		strip -S *.a
-		ar crsT ${lib}.a libpetscts.a libpetscsnes.a libpetscksp.a libpetscdm.a libpetscmat.a libpetscvec.a libpetscsys.a
-		${ld} -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o ${lib}.dll -Wl,--out-implib,${lib}.dll.a -Wl,--whole-archive ${lib}.a -Wl,--no-whole-archive $(pkg-config openblas --libs) -lgfortran
-	)
+  	(
+  		cd ${build}/lib
+  		lib=libpetsc-${build}
+  		rm -rf ${lib}.a
+  		strip -S *.a # FIXME skip if debugging build
+  		ar crsT ${lib}.a libpetscts.a libpetscsnes.a libpetscksp.a libpetscdm.a libpetscmat.a libpetscvec.a libpetscsys.a
+  		${ld} ${ldflags} -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o ${lib}.dll -Wl,--out-implib,${lib}.dll.a -Wl,--whole-archive ${lib}.a -Wl,--no-whole-archive $(pkg-config openblas --libs) -lgfortran
+  	)
   done
 }
 
@@ -93,41 +131,46 @@ _package() {
 	find . \( ! -name '*.h' -a -type f \) -delete
   )
   for build in ${builds}; do
-	(
-		cd ${build}/lib
-		mkdir -p ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/${build}
-		cp *.a ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/${build}
-		cp *.dll ${pkgdir}${MINGW_PREFIX}/bin
-	)
-	(
-		cd ${build}/include
-		mkdir -p ${pkgdir}${MINGW_PREFIX}/include/${_realname}/${build}
-		cp *.{h,mod} ${pkgdir}${MINGW_PREFIX}/include/${_realname}/${build}
-	)
-	case ${build} in
-		?s?)
-			impi='-I${includedir}/mpiuni'
-			rmpi=''
-		;;
-		*)
-			impi=''
-			rmpi='msmpi'
-		;;
-	esac
-	lib=${_realname}-${build}
-	echo "
-		prefix=${MINGW_PREFIX}
-		libdir=\${prefix}/lib/${_realname}
-		includedir=\${prefix}/include/${_realname}
-		Name: ${_realname}
-		URL: ${url}
-		Version: ${pkgver}
-		Description: Sparse iterative (non)linear solver package (mingw-w64)
-		Requires.private: openblas ${rmpi}
-		Cflags: ${impi} -I\${includedir}/${build} -I\${includedir}
-		Libs.private: -L\${libdir}/${build} -l${lib} -lgfortran -lquadmath
-		Libs: -L\${libdir}/${build} -l${lib}
-	" | sed '/^\s*$/d;s/^\s*//' > ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/${lib}.pc
+  	(
+  		cd ${build}/lib
+  		mkdir -p ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/${build}
+  		cp *.a ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/${build}
+  		cp *.dll ${pkgdir}${MINGW_PREFIX}/bin
+  	)
+  	(
+  		cd ${build}/include
+  		mkdir -p ${pkgdir}${MINGW_PREFIX}/include/${_realname}/${build}
+  		cp *.{h,mod} ${pkgdir}${MINGW_PREFIX}/include/${_realname}/${build}
+  	)
+    impi=
+    rmpi=
+    ldflags=
+  	case ${build} in
+  		?s?)
+  			impi='-I${includedir}/mpiuni'
+  		;;
+      ?t?)
+        ldflags=-fopenmp
+        impi='-I${includedir}/mpiuni'
+      ;;
+  		*)
+  			rmpi='msmpi'
+  		;;
+  	esac
+  	lib=${_realname}-${build}
+  	echo "
+  		prefix=${MINGW_PREFIX}
+  		libdir=\${prefix}/lib/${_realname}
+  		includedir=\${prefix}/include/${_realname}
+  		Name: ${_realname}
+  		URL: ${url}
+  		Version: ${pkgver}
+  		Description: Sparse iterative (non)linear solver package (mingw-w64)
+  		Requires.private: openblas ${rmpi}
+  		Cflags: ${impi} -I\${includedir}/${build} -I\${includedir}
+  		Libs.private: ${ldflags} -L\${libdir}/${build} -l${lib} -lgfortran -lquadmath
+  		Libs: -L\${libdir}/${build} -l${lib}
+  	" | sed '/^\s*$/d;s/^\s*//' > ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/${lib}.pc
   done
 }
 
