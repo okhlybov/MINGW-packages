@@ -5,7 +5,7 @@ _realname=mumps
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
 pkgver=5.3.1
-pkgrel=1
+pkgrel=2
 arch=('any')
 pkgdesc="Sparse direct SLAE solver (mingw-w64)"
 depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-metis" "${MINGW_PACKAGE_PREFIX}-parmetis" "${MINGW_PACKAGE_PREFIX}-scotch" "${MINGW_PACKAGE_PREFIX}-ptscotch" "${MINGW_PACKAGE_PREFIX}-scalapack")
@@ -26,68 +26,89 @@ prepare() {
 }
 
 _seq_pc="metis esmumps openblas"
+_shm_pc=$_seq_pc
 _mpi_pc="scalapack parmetis ptesmumps openblas msmpi"
 
 build() {
   cd "${srcdir}/${_realname}_${pkgver}"
-  for mod in PAR SEQ; do
+  for mod in SEQ SHM PAR; do
     cp Makefile.inc.${mod} Makefile.inc
     make -j1 clean all
+    if [[ $mod == SEQ ]]; then
+      cp libseq/libmpi_seq.a lib/libmumps_mpi_seq.a
+      cp PORD/lib/libpord.a lib/libmumps_pord.a
+    fi
   done
   cd lib
   rm -rf libmumps-*.a
-  cp ../libseq/libmpi_seq.a .
   strip -S *.a # thin archives require the constituent archives to be stripped beforehand
   for x in c z s d; do
-    ar crsT libmumps-${x}so.a lib${x}mumps_seq.a libmumps_common_seq.a libpord_seq.a libmpi_seq.a
-    ar crsT libmumps-${x}mo.a lib${x}mumps_mpi.a libmumps_common_mpi.a libpord_mpi.a
+    ar crsT libmumps-${x}so.a lib${x}mumps_seq.a libmumps_common_seq.a libmumps_pord.a libmumps_mpi_seq.a
+    ar crsT libmumps-${x}to.a lib${x}mumps_shm.a libmumps_common_shm.a libmumps_pord.a libmumps_mpi_seq.a
+    ar crsT libmumps-${x}mo.a lib${x}mumps_mpi.a libmumps_common_mpi.a libmumps_pord.a
+    # TODO export only the required driver routine to reduce the exported symbol table size
     gfortran -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}so.dll -Wl,--out-implib,libmumps-${x}so.dll.a -Wl,--whole-archive libmumps-${x}so.a -Wl,--no-whole-archive $(pkg-config ${_seq_pc} --libs)
-    mpif90 -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}mo.dll -Wl,--out-implib,libmumps-${x}mo.dll.a -Wl,--whole-archive libmumps-${x}mo.a -Wl,--no-whole-archive $(pkg-config ${_mpi_pc} --libs)
+    gfortran -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}to.dll -Wl,--out-implib,libmumps-${x}to.dll.a -Wl,--whole-archive libmumps-${x}to.a -Wl,--no-whole-archive $(pkg-config ${_shm_pc} --libs)
+    mpif90 -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}mo.dll -Wl,--out-implib,libmumps-${x}mo.dll.a -Wl,--whole-archive libmumps-${x}mo.a -Wl,--no-whole-archive $(pkg-config ${_mpi_pc} --libs)
   done
 }
 
 package() {
   cd "$srcdir/${_realname}_${pkgver}"
-  mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,lib,include/mumps/mpi_seq} ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig ${pkgdir}${MINGW_PREFIX}/share/tests/mumps
+  mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,lib,include/mumps_mpi_seq} ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig ${pkgdir}${MINGW_PREFIX}/share/tests/mumps
   (
     cd libseq
-    install -m644 mpi*.h "${pkgdir}${MINGW_PREFIX}/include/mumps/mpi_seq"
+    install -m644 mpi*.h "${pkgdir}${MINGW_PREFIX}/include/mumps_mpi_seq"
   )
   (
     cd lib
+    rm -f libpord*.a
     install -m644 *.a "${pkgdir}${MINGW_PREFIX}/lib"
     install -m644 *.dll "${pkgdir}${MINGW_PREFIX}/bin"
   )
   (
     cd include
-    install -m644 *.h "${pkgdir}${MINGW_PREFIX}/include/mumps"
+    install -m644 *.h "${pkgdir}${MINGW_PREFIX}/include"
   )
   for x in c z s d; do
     echo "
       prefix=${MINGW_PREFIX}
       libdir=\${prefix}/lib
-      includedir=\${prefix}/include/mumps
+      includedir=\${prefix}/include
       Name: ${_realname}
       URL: ${url}
       Version: ${pkgver}
       Description: Sequential version of the sparse direct SLAE solver (mingw-w64)
       Requires.private: ${_seq_pc}
-      Cflags: -I\${includedir} -I\${includedir}/mpi_seq
+      Cflags: -I\${includedir}/mumps_mpi_seq
       Libs.private: -lmumps-${x}so -lgfortran -lquadmath
-      Libs: -L\${libdir} -lmumps-${x}so
+      Libs: -lmumps-${x}so
     " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/mumps-${x}so.pc"
     echo "
       prefix=${MINGW_PREFIX}
       libdir=\${prefix}/lib
-      includedir=\${prefix}/include/mumps
+      includedir=\${prefix}/include
       Name: ${_realname}
       URL: ${url}
       Version: ${pkgver}
-      Description: MPI-aware parallel version of the sparse direct SLAE solver (mingw-w64)
-      Cflags: -I\${includedir}
+      Description: OpenMP shared memory parallel version of the sparse direct SLAE solver (mingw-w64)
+      Requires.private: ${_shm_pc}
+      Cflags: -I\${includedir}/mumps_mpi_seq
+      Libs.private: -fopenmp -lmumps-${x}to -lgfortran -lquadmath
+      Libs: -lmumps-${x}to
+    " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/mumps-${x}to.pc"
+    echo "
+      prefix=${MINGW_PREFIX}
+      libdir=\${prefix}/lib
+      includedir=\${prefix}/include
+      Name: ${_realname}
+      URL: ${url}
+      Version: ${pkgver}
+      Description: MPI+OpenMP hybrid parallel version of the sparse direct SLAE solver (mingw-w64)
+      Cflags:
       Requires.private: ${_mpi_pc}
-      Libs.private: -lmumps-${x}mo -lgfortran -lquadmath
-      Libs: -L\${libdir} -lmumps-${x}mo
+      Libs.private: -fopenmp -lmumps-${x}mo -lgfortran -lquadmath
+      Libs: -lmumps-${x}mo
     " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/mumps-${x}mo.pc"
   done
   (
