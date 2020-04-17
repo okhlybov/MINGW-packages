@@ -5,7 +5,7 @@ _realname=mumps
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
 pkgver=5.3.1
-pkgrel=2
+pkgrel=3
 arch=('any')
 pkgdesc="Sparse direct SLAE solver (mingw-w64)"
 depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-metis" "${MINGW_PACKAGE_PREFIX}-parmetis" "${MINGW_PACKAGE_PREFIX}-scotch" "${MINGW_PACKAGE_PREFIX}-ptscotch" "${MINGW_PACKAGE_PREFIX}-scalapack")
@@ -33,9 +33,9 @@ build() {
   cd "${srcdir}/${_realname}_${pkgver}"
   for mod in SEQ SHM PAR; do
     cp Makefile.inc.${mod} Makefile.inc
-    make -j1 clean all
+    make -j1 clean alllib
     if [[ $mod == SEQ ]]; then
-      cp libseq/libmpi_seq.a lib/libmumps_mpi_seq.a
+      cp libseq/libmpiseq_seq.a lib/libmumps_mpi_seq.a
       cp PORD/lib/libpord.a lib/libmumps_pord.a
     fi
   done

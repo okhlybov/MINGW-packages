@@ -1,6 +1,6 @@
 diff -urN MUMPS_5.3.1.orig/Makefile.inc.PAR MUMPS_5.3.1/Makefile.inc.PAR
 --- MUMPS_5.3.1.orig/Makefile.inc.PAR	1970-01-01 05:00:00.000000000 +0500
-+++ MUMPS_5.3.1/Makefile.inc.PAR	2020-04-17 19:03:46.704697400 +0500
++++ MUMPS_5.3.1/Makefile.inc.PAR	2020-04-17 22:07:50.881403400 +0500
 @@ -0,0 +1,168 @@
 +#
 +#  This file is part of MUMPS 5.1.2, released
@@ -154,7 +154,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.PAR MUMPS_5.3.1/Makefile.inc.PAR
 +CDEFS = -DAdd_
 +
 +#COMPILER OPTIONS
-+OPTF    = $(CFLAGS) -I. -fopenmp
++OPTF    = $(CFLAGS) -I. -fopenmp -DBLR_MT
 +OPTC    = $(CFLAGS) -I.
 +OPTL    = $(CFLAGS) -fopenmp
 +
@@ -330,7 +330,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.SEQ MUMPS_5.3.1/Makefile.inc.SEQ
 +LIBSEQNEEDED = libseqneeded
 diff -urN MUMPS_5.3.1.orig/Makefile.inc.SHM MUMPS_5.3.1/Makefile.inc.SHM
 --- MUMPS_5.3.1.orig/Makefile.inc.SHM	1970-01-01 05:00:00.000000000 +0500
-+++ MUMPS_5.3.1/Makefile.inc.SHM	2020-04-17 18:49:31.127945400 +0500
++++ MUMPS_5.3.1/Makefile.inc.SHM	2020-04-17 22:08:10.904570900 +0500
 @@ -0,0 +1,154 @@
 +#
 +#  This file is part of MUMPS 5.1.2, released
@@ -477,7 +477,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.SHM MUMPS_5.3.1/Makefile.inc.SHM
 +CDEFS = -DAdd_
 +
 +#COMPILER OPTIONS
-+OPTF    = $(CFLAGS) -I. -fopenmp
++OPTF    = $(CFLAGS) -I. -fopenmp -DBLR_MT
 +OPTC    = $(CFLAGS) -I.
 +OPTL    = $(CFLAGS) -fopenmp
 +
