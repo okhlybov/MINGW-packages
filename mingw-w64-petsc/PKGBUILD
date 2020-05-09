@@ -3,12 +3,12 @@
 _realname=petsc
 
 pkgbase=mingw-w64-${_realname}
-pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-${_realname}-build")
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-${_realname}-debug")
 pkgver=3.13.0
-pkgrel=1
+pkgrel=2
 arch=('any')
 pkgdesc="Sparse iterative (non)linear solver package (mingw-w64)"
-depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas")
+depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas")
 makedepends=("python2" "${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-gcc-fortran" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-lapack" "${MINGW_PACKAGE_PREFIX}-openblas")
 options=('strip' 'staticlibs')
 license=('2-clause BSD')
@@ -37,15 +37,14 @@ untar() {
       exit -1
       ;;
   esac
-
   tar x${u}f $1 2> /dev/null || true
-
   ifs=$IFS
   IFS=$'\n'
   for s in `tar tv${u}f $1 | grep '^l.*->' -`; do
     IFS=' ' read -r -a f <<< "$s"
-    dst="${f[8]}"
-    src=`dirname "$dst"`/"${f[10]}"
+    dst="${f[5]}"
+    src=`dirname "$dst"`/"${f[7]}"
+    rm -f "$dst"
     cp -r "$src" "$dst"
   done
   IFS=$ifs
@@ -60,12 +59,15 @@ prepare() {
   done
 }
 
-builds="dso dto dmo zso zto zmo"
+obuilds="dso dto dmo zso zto zmo"
+dbuilds="dsd dtd dmd zsd ztd zmd"
+
+builds="$dbuilds $obuilds"
 
 build() {
   cd  ${srcdir}/build-${MINGW_CHOST}/${_realname}-${pkgver}
   for build in ${builds}; do
-    opts="--with-single-library=0 --disable-shared --with-windows-graphics=0 --with-x=0 --with-openblas=1"
+    opts="--with-single-library=0 --disable-shared --with-windows-graphics=0 --with-x=0 --with-openblas=1  --with-openblas-dir=$MINGW_PREFIX"
     ld=gcc
     case ${build} in
       ?m?)
@@ -99,20 +101,31 @@ build() {
     case ${build} in
       *o)
         opts="$opts --with-debugging=0"
+        cflags="$CFLAGS"
+        cxxflags="$CXXFLAGS"
+        fflags="$CFLAGS"
       ;;
       *d)
         opts="$opts --with-debugging=1"
+        debug="-g -Og"
+        cflags="$CFLAGS $debug"
+        cxxflags="$CXXFLAGS $debug"
+        fflags="$CFLAGS $debug"
       ;;
     esac
     export PETSC_DIR=`pwd`
     python2 configure --PETSC_ARCH=${build} ${opts} \
-      CFLAGS="${CFLAGS}" FFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" MAKEFLAGS="${MAKEFLAGS}"
+      CFLAGS="$cflags" FFLAGS="$fflags" CXXFLAGS="$cxxflags" CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" MAKEFLAGS="$MAKEFLAGS"
     make PETSC_ARCH=${build} all
   	(
   		cd ${build}/lib
   		lib=libpetsc-${build}
   		rm -rf ${lib}.a
-  		strip -S *.a # FIXME skip if debugging build
+      case ${build} in
+        *o)
+          strip -S *.a
+        ;;
+      esac
   		ar crsT ${lib}.a libpetscts.a libpetscsnes.a libpetscksp.a libpetscdm.a libpetscmat.a libpetscvec.a libpetscsys.a
   		${ld} ${ldflags} -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o ${lib}.dll -Wl,--out-implib,${lib}.dll.a -Wl,--whole-archive ${lib}.a -Wl,--no-whole-archive $(pkg-config openblas --libs) -lgfortran
   	)
@@ -120,6 +133,11 @@ build() {
 }
 
 _package() {
+  if [[ $2 == o ]]; then
+    options=('strip' 'staticlibs')
+  else
+    options=('!strip' 'staticlibs')
+  fi
   cd ${srcdir}/build-${MINGW_CHOST}/${_realname}-${pkgver}
   mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,lib/pkgconfig,lib/${_realname},include/${_realname}}
   (
@@ -130,7 +148,7 @@ _package() {
 	cd ${pkgdir}${MINGW_PREFIX}/include/${_realname}
 	find . \( ! -name '*.h' -a -type f \) -delete
   )
-  for build in ${builds}; do
+  for build in $1; do
   	(
   		cd ${build}/lib
   		mkdir -p ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/${build}
@@ -181,17 +199,25 @@ _package_build() {
 }
 
 package_mingw-w64-i686-petsc() {
-	_package
+	_package "$obuilds" o
 }
 
 package_mingw-w64-x86_64-petsc() {
-	_package
+	_package "$obuilds" o
 }
 
-package_mingw-w64-i686-petsc-build() {
+package_mingw-w64-i686-petsc-debug() {
+  _package "$dbuilds" d
+}
+
+package_mingw-w64-x86_64-petsc-debug() {
+  _package "$dbuilds" d
+}
+
+_package_mingw-w64-i686-petsc-build() {
 	_package_build
 }
 
-package_mingw-w64-x86_64-petsc-build() {
+_package_mingw-w64-x86_64-petsc-build() {
 	_package_build
 }
