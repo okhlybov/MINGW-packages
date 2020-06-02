@@ -4,19 +4,19 @@ _realname=slepc
 
 pkgbase=mingw-w64-${_realname}
 pkgname=${MINGW_PACKAGE_PREFIX}-${_realname}
-pkgver=3.8.2
+pkgver=3.13.1
 pkgrel=1
 arch=('any')
-petsc_required=3.8
+petsc_required=3.13
 pkgdesc="Sparse iterative eigenvalue problem solver package (mingw-w64)"
 depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-petsc>=${petsc_required}")
-makedepends=("python2" "${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-lapack" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-petsc-build>=${petsc_required}")
+makedepends=("python2" "${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-lapack" "${MINGW_PACKAGE_PREFIX}-openblas" ) # "${MINGW_PACKAGE_PREFIX}-petsc-build>=${petsc_required}"
 options=('strip' 'staticlibs')
 license=('2-clause BSD')
 url="http://slepc.upv.es/"
 source=("http://slepc.upv.es/download/distrib/${_realname}-${pkgver}.tar.gz")
 noextract=("${_realname}-${pkgver}.tar.gz")
-sha256sums=('1e7d20d20eb26da307d36017461fe4a55f40e947e232739179dbe6412e22ed13')
+sha256sums=('f4a5ede4ebdee5e15153ce31c1421209c7b794bd94be1430018615fb0838b879')
 
 prepare() {
   mkdir -p $srcdir/build-${MINGW_CHOST} && cd $srcdir/build-${MINGW_CHOST}
