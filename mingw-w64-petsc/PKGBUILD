@@ -4,8 +4,8 @@ _realname=petsc
 
 pkgbase=mingw-w64-${_realname}
 pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-${_realname}-debug")
-pkgver=3.13.0
-pkgrel=2
+pkgver=3.13.2
+pkgrel=1
 arch=('any')
 pkgdesc="Sparse iterative (non)linear solver package (mingw-w64)"
 depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas")
@@ -15,7 +15,7 @@ license=('2-clause BSD')
 url="https://www.mcs.anl.gov/petsc/"
 source=("http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/${_realname}-lite-${pkgver}.tar.gz")
 noextract=("${_realname}-lite-${pkgver}.tar.gz")
-sha256sums=('f0ea543a54145c5d1387e25b121c3fd1b1ca834032c5a33f6f1d929e95bdf0e5')
+sha256sums=('6083422a7c5b8e89e5e4ccf64acade9bf8ab70245e25bca3a3da03caf74602f1')
 
 # Bash tarball extractor function which replaces symlinks with real copies.
 # Useful for platforms which do not handle symlinks well, such as MSYS(2).
@@ -40,10 +40,10 @@ untar() {
   tar x${u}f $1 2> /dev/null || true
   ifs=$IFS
   IFS=$'\n'
-  for s in `tar tv${u}f $1 | grep '^l.*->' -`; do
+  for s in `tar tv${u}f "$1" | grep '^l.*->' -`; do
     IFS=' ' read -r -a f <<< "$s"
     dst="${f[5]}"
-    src=`dirname "$dst"`/"${f[7]}"
+    src=$(dirname "$dst")/"${f[7]}"
     rm -f "$dst"
     cp -r "$src" "$dst"
   done
