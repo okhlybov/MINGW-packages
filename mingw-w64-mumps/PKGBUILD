@@ -4,8 +4,8 @@ _realname=mumps
 
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=5.3.1
-pkgrel=3
+pkgver=5.3.3
+pkgrel=1
 arch=('any')
 pkgdesc="Sparse direct SLAE solver (mingw-w64)"
 depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-metis" "${MINGW_PACKAGE_PREFIX}-parmetis" "${MINGW_PACKAGE_PREFIX}-scotch" "${MINGW_PACKAGE_PREFIX}-ptscotch" "${MINGW_PACKAGE_PREFIX}-scalapack")
@@ -15,7 +15,7 @@ options=('strip' 'staticlibs')
 license=('LGPL')
 url="http://mumps.enseeiht.fr/"
 source=("http://mumps.enseeiht.fr/MUMPS_${pkgver}.tar.gz")
-sha256sums=('774fc9411a3ab4704bc907cb7d30090ce6a65b83cde32549c58d3e9f63594e1a')
+sha256sums=('27e7749ac05006bf8e81a457c865402bb72a42bf3bc673da49de1020f0f32011')
 rootdir=`pwd`
 
 prepare() {
