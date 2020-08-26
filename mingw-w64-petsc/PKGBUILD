@@ -3,8 +3,9 @@
 _realname=petsc
 
 pkgbase=mingw-w64-${_realname}
-pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-${_realname}-debug")
-pkgver=3.13.2
+#pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-${_realname}-debug")
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgver=3.13.4
 pkgrel=1
 arch=('any')
 pkgdesc="Sparse iterative (non)linear solver package (mingw-w64)"
@@ -15,7 +16,7 @@ license=('2-clause BSD')
 url="https://www.mcs.anl.gov/petsc/"
 source=("http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/${_realname}-lite-${pkgver}.tar.gz")
 noextract=("${_realname}-lite-${pkgver}.tar.gz")
-sha256sums=('6083422a7c5b8e89e5e4ccf64acade9bf8ab70245e25bca3a3da03caf74602f1')
+sha256sums=('8d470cba1ceb9638694550134a2f23aac85ed7249cb74992581210597d978b94')
 
 # Bash tarball extractor function which replaces symlinks with real copies.
 # Useful for platforms which do not handle symlinks well, such as MSYS(2).
@@ -60,8 +61,8 @@ prepare() {
 }
 
 obuilds="dso dto dmo zso zto zmo"
-dbuilds="dsd dtd dmd zsd ztd zmd"
-
+#dbuilds="dsd dtd dmd zsd ztd zmd"
+ obuilds=dmo
 builds="$dbuilds $obuilds"
 
 build() {
