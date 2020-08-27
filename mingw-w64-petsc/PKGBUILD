@@ -3,8 +3,7 @@
 _realname=petsc
 
 pkgbase=mingw-w64-${_realname}
-#pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-${_realname}-debug")
-pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}") # "${MINGW_PACKAGE_PREFIX}-${_realname}-debug"
 pkgver=3.13.4
 pkgrel=1
 arch=('any')
@@ -62,7 +61,7 @@ prepare() {
 
 obuilds="dso dto dmo zso zto zmo"
 #dbuilds="dsd dtd dmd zsd ztd zmd"
- obuilds=dmo
+
 builds="$dbuilds $obuilds"
 
 build() {
