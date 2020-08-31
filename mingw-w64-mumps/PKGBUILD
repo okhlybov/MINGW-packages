@@ -8,8 +8,8 @@ pkgver=5.3.3
 pkgrel=1
 arch=('any')
 pkgdesc="Sparse direct SLAE solver (mingw-w64)"
-depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-metis" "${MINGW_PACKAGE_PREFIX}-parmetis" "${MINGW_PACKAGE_PREFIX}-scotch" "${MINGW_PACKAGE_PREFIX}-ptscotch" "${MINGW_PACKAGE_PREFIX}-scalapack")
-makedepends=("${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-gcc-fortran" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-metis" "${MINGW_PACKAGE_PREFIX}-parmetis" "${MINGW_PACKAGE_PREFIX}-scotch" "${MINGW_PACKAGE_PREFIX}-ptscotch" "${MINGW_PACKAGE_PREFIX}-scalapack")
+depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran")
+makedepends=("${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-gcc-fortran" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-openblas" "${MINGW_PACKAGE_PREFIX}-metis" "${MINGW_PACKAGE_PREFIX}-parmetis" "${MINGW_PACKAGE_PREFIX}-scotch" "${MINGW_PACKAGE_PREFIX}-scalapack")
 optdepends=("buildtest: build testing support")
 options=('strip' 'staticlibs')
 license=('LGPL')
@@ -25,9 +25,9 @@ prepare() {
   done
 }
 
-_seq_pc="metis esmumps openblas"
-_shm_pc=$_seq_pc
-_mpi_pc="scalapack parmetis ptesmumps openblas msmpi"
+seq_pc="metis scotch openblas"
+shm_pc=$seq_pc
+mpi_pc="scalapack parmetis ptscotch openblas msmpi"
 
 build() {
   cd "${srcdir}/${_realname}_${pkgver}"
@@ -47,9 +47,9 @@ build() {
     ar crsT libmumps-${x}to.a lib${x}mumps_shm.a libmumps_common_shm.a libmumps_pord.a libmumps_mpi_seq.a
     ar crsT libmumps-${x}mo.a lib${x}mumps_mpi.a libmumps_common_mpi.a libmumps_pord.a
     # TODO export only the required driver routine to reduce the exported symbol table size
-    gfortran -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}so.dll -Wl,--out-implib,libmumps-${x}so.dll.a -Wl,--whole-archive libmumps-${x}so.a -Wl,--no-whole-archive $(pkg-config ${_seq_pc} --libs)
-    gfortran -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}to.dll -Wl,--out-implib,libmumps-${x}to.dll.a -Wl,--whole-archive libmumps-${x}to.a -Wl,--no-whole-archive $(pkg-config ${_shm_pc} --libs)
-    mpif90 -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}mo.dll -Wl,--out-implib,libmumps-${x}mo.dll.a -Wl,--whole-archive libmumps-${x}mo.a -Wl,--no-whole-archive $(pkg-config ${_mpi_pc} --libs)
+    gfortran -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}so.dll -Wl,--out-implib,libmumps-${x}so.dll.a -Wl,--whole-archive libmumps-${x}so.a -Wl,--no-whole-archive -lesmumps $(pkg-config ${seq_pc} --libs)
+    gfortran -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}to.dll -Wl,--out-implib,libmumps-${x}to.dll.a -Wl,--whole-archive libmumps-${x}to.a -Wl,--no-whole-archive -lesmumps $(pkg-config ${shm_pc} --libs)
+    mpif90 -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}mo.dll -Wl,--out-implib,libmumps-${x}mo.dll.a -Wl,--whole-archive libmumps-${x}mo.a -Wl,--no-whole-archive -lptesmumps $(pkg-config ${mpi_pc} --libs)
   done
 }
 
@@ -78,10 +78,10 @@ package() {
       Name: ${_realname}
       URL: ${url}
       Version: ${pkgver}
-      Description: Sequential version of the sparse direct SLAE solver (mingw-w64)
-      Requires.private: ${_seq_pc}
+      Description: Sequential version of the sparse direct SLAE solver
+      Requires.private: ${seq_pc}
       Cflags: -I\${includedir}/mumps_mpi_seq
-      Libs.private: -lmumps-${x}so -lgfortran -lquadmath
+      Libs.private: -lmumps-${x}so -lesmumps -lgfortran -lquadmath
       Libs: -lmumps-${x}so
     " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/mumps-${x}so.pc"
     echo "
@@ -91,10 +91,10 @@ package() {
       Name: ${_realname}
       URL: ${url}
       Version: ${pkgver}
-      Description: OpenMP shared memory parallel version of the sparse direct SLAE solver (mingw-w64)
-      Requires.private: ${_shm_pc}
+      Description: OpenMP shared memory parallel version of the sparse direct SLAE solver
+      Requires.private: ${shm_pc}
       Cflags: -I\${includedir}/mumps_mpi_seq
-      Libs.private: -fopenmp -lmumps-${x}to -lgfortran -lquadmath
+      Libs.private: -fopenmp -lmumps-${x}to -lesmumps -lgfortran -lquadmath
       Libs: -lmumps-${x}to
     " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/mumps-${x}to.pc"
     echo "
@@ -104,10 +104,10 @@ package() {
       Name: ${_realname}
       URL: ${url}
       Version: ${pkgver}
-      Description: MPI+OpenMP hybrid parallel version of the sparse direct SLAE solver (mingw-w64)
+      Description: MPI+OpenMP hybrid parallel version of the sparse direct SLAE solver
       Cflags:
-      Requires.private: ${_mpi_pc}
-      Libs.private: -fopenmp -lmumps-${x}mo -lgfortran -lquadmath
+      Requires.private: ${mpi_pc}
+      Libs.private: -fopenmp -lmumps-${x}mo -lptesmumps -lgfortran -lquadmath
       Libs: -lmumps-${x}mo
     " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/mumps-${x}mo.pc"
   done

@@ -45,7 +45,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.PAR MUMPS_5.3.1/Makefile.inc.PAR
 +#
 +
 +#SCOTCHDIR  = ${HOME}/scotch_6.0
-+ISCOTCH    = $(shell pkg-config ptesmumps --cflags)
++ISCOTCH    = $(shell pkg-config ptscotch --cflags)
 +#
 +# You have to choose one among the following two lines depending on
 +# the type of analysis you want to perform. If you want to perform only
@@ -53,7 +53,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.PAR MUMPS_5.3.1/Makefile.inc.PAR
 +# variable below); for both parallel and sequential analysis choose the second 
 +# line (remember to add -Dptscotch in the ORDERINGSF variable below)
 +
-+LSCOTCH    = $(shell pkg-config ptesmumps --libs) # -L$(SCOTCHDIR)/lib -lesmumps -lscotch -lscotcherr
++LSCOTCH    = $(shell pkg-config ptscotch --libs) -lptesmumps # -L$(SCOTCHDIR)/lib -lesmumps -lscotch -lscotcherr
 +#LSCOTCH    = -L$(SCOTCHDIR)/lib -lptesmumps -lptscotch -lptscotcherr
 +
 +
@@ -220,7 +220,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.SEQ MUMPS_5.3.1/Makefile.inc.SEQ
 +#
 +
 +#SCOTCHDIR  = ${HOME}/scotch_6.0
-+ISCOTCH    =  $(shell pkg-config esmumps --cflags)
++ISCOTCH    =  $(shell pkg-config scotch --cflags)
 +#
 +# You have to choose one among the following two lines depending on
 +# the type of analysis you want to perform. If you want to perform only
@@ -228,7 +228,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.SEQ MUMPS_5.3.1/Makefile.inc.SEQ
 +# variable below); for both parallel and sequential analysis choose the second 
 +# line (remember to add -Dptscotch in the ORDERINGSF variable below)
 +
-+LSCOTCH    = $(shell pkg-config esmumps --libs) # -L$(SCOTCHDIR)/lib -lesmumps -lscotch -lscotcherr
++LSCOTCH    = $(shell pkg-config scotch --libs) -lesmumps # -L$(SCOTCHDIR)/lib -lesmumps -lscotch -lscotcherr
 +#LSCOTCH    = -L$(SCOTCHDIR)/lib -lptesmumps -lptscotch -lptscotcherr
 +
 +
@@ -378,7 +378,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.SHM MUMPS_5.3.1/Makefile.inc.SHM
 +#
 +
 +#SCOTCHDIR  = ${HOME}/scotch_6.0
-+ISCOTCH    =  $(shell pkg-config esmumps --cflags)
++ISCOTCH    =  $(shell pkg-config scotch --cflags)
 +#
 +# You have to choose one among the following two lines depending on
 +# the type of analysis you want to perform. If you want to perform only
@@ -386,7 +386,7 @@ diff -urN MUMPS_5.3.1.orig/Makefile.inc.SHM MUMPS_5.3.1/Makefile.inc.SHM
 +# variable below); for both parallel and sequential analysis choose the second 
 +# line (remember to add -Dptscotch in the ORDERINGSF variable below)
 +
-+LSCOTCH    = $(shell pkg-config esmumps --libs) # -L$(SCOTCHDIR)/lib -lesmumps -lscotch -lscotcherr
++LSCOTCH    = $(shell pkg-config scotch --libs) -lesmumps # -L$(SCOTCHDIR)/lib -lesmumps -lscotch -lscotcherr
 +#LSCOTCH    = -L$(SCOTCHDIR)/lib -lptesmumps -lptscotch -lptscotcherr
 +
 +
