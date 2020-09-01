@@ -3,10 +3,10 @@
 _realname=imagemagick
 pkgbase="mingw-w64-${_realname}"
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-_basever=7.0.9
-_rc=-2
-pkgver=${_basever}${_rc//-/.}
-pkgrel=1
+_basever=7.0.10
+_rc=-11
+pkgver=${_basever}${_rc//-/.} # pkgver doesn't have "," "/", "-" and space.
+pkgrel=2
 pkgdesc="An image viewing/manipulation program (mingw-w64)"
 arch=('any')
 url="https://www.imagemagick.org/"
@@ -58,15 +58,14 @@ optdepends=("${MINGW_PACKAGE_PREFIX}-ghostscript: for Ghostscript support"
             #"${MINGW_PACKAGE_PREFIX}-libwebp: for WEBP support"
             )
 options=('staticlibs' 'strip' '!debug' 'libtool')
-source=(#https://www.imagemagick.org/download/ImageMagick-${pkgver%.*}-${pkgver##*.}.tar.xz{,.asc}
-        https://www.imagemagick.org/download/ImageMagick-${_basever}${_rc}.tar.xz{,.asc}
+source=(https://imagemagick.org/download/releases/ImageMagick-${_basever}${_rc}.tar.xz{,.asc}
         ImageMagick-7.0.1.3-mingw.patch
         001-7.0.4.1-relocate.patch
         002-7.0.4.1-build-fixes.patch)
-sha256sums=('459675a44f4aa1f68ba079b8ba0a83cd1c07b4530a67311082be3c863f601e9a'
+sha256sums=('a06d686bbad1eae663b2571bd7bb45f0e1ba438ed2217863d2e79ab394c5dfbd'
             'SKIP'
             '313e781918c66a2acfdbd99fab3de2fd680c34efdaaab18318d7543d4c79bb3e'
-            '90275469a28cd21d97a4a4ea64bd44ce25af948b5314338cc6b4e288acfa22cf'
+            '28c54cd97706e14e631f5dd4d67b79c1680be6eacaf94c15b0f5acd8159b64b0'
             '5ad829d563aed15e6d829f81ea0fa91053108d428449e91c733c5acae5a341b3')
 #Lexie Parsimoniae (ImageMagick code signing key) <lexie.parsimoniae@imagemagick.org>
 validpgpkeys=('D8272EF51DA223E4D05B466989AB63D48277377A')

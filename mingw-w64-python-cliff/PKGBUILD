@@ -2,42 +2,37 @@
 
 _realname=cliff
 pkgbase=mingw-w64-python-${_realname}
-pkgname=("${MINGW_PACKAGE_PREFIX}-python2-${_realname}"  "${MINGW_PACKAGE_PREFIX}-python3-${_realname}")
-pkgver=2.16.0
+pkgname=("${MINGW_PACKAGE_PREFIX}-python-${_realname}")
+provides=("${MINGW_PACKAGE_PREFIX}-python3-${_realname}")
+conflicts=("${MINGW_PACKAGE_PREFIX}-python3-${_realname}")
+replaces=("${MINGW_PACKAGE_PREFIX}-python3-${_realname}")
+pkgver=3.1.0
 pkgrel=1
 pkgdesc="Command Line Interface Formulation Framewor (mingw-w64)"
 arch=('any')
 url='https://docs.openstack.org/cliff/latest/'
 license=('Apache')
-makedepends=('git' 
-           "${MINGW_PACKAGE_PREFIX}-python3-setuptools"
-           "${MINGW_PACKAGE_PREFIX}-python2-setuptools" 
-           "${MINGW_PACKAGE_PREFIX}-python3-pbr" 
-           "${MINGW_PACKAGE_PREFIX}-python2-pbr"
-           "${MINGW_PACKAGE_PREFIX}-python3-cmd2"
-           "${MINGW_PACKAGE_PREFIX}-python2-cmd2"
-           "${MINGW_PACKAGE_PREFIX}-python3-prettytable"
-           "${MINGW_PACKAGE_PREFIX}-python2-prettytable"
-           "${MINGW_PACKAGE_PREFIX}-python3-pyparsing"
-           "${MINGW_PACKAGE_PREFIX}-python2-pyparsing"
-           "${MINGW_PACKAGE_PREFIX}-python3-stevedore"
-           "${MINGW_PACKAGE_PREFIX}-python2-stevedore"
-           "${MINGW_PACKAGE_PREFIX}-python2-unicodecsv" 
-           "${MINGW_PACKAGE_PREFIX}-python3-yaml"
-           "${MINGW_PACKAGE_PREFIX}-python2-yaml")
-#checkdepends=("${MINGW_PACKAGE_PREFIX}-python3-testrepository"
-#              "${MINGW_PACKAGE_PREFIX}-python2-testrepository" 
-#              "${MINGW_PACKAGE_PREFIX}-python3-mock" 
-#              "${MINGW_PACKAGE_PREFIX}-python2-mock"
-#              "${MINGW_PACKAGE_PREFIX}-python3-sphinx"
-#              "${MINGW_PACKAGE_PREFIX}-python2-sphinx"
-#              "${MINGW_PACKAGE_PREFIX}-python3-oslosphinx"
-#              "${MINGW_PACKAGE_PREFIX}-python2-oslosphinx"
-#              "${MINGW_PACKAGE_PREFIX}-python3-testscenarios"
-#              "${MINGW_PACKAGE_PREFIX}-python2-testscenarios")
+depends=("${MINGW_PACKAGE_PREFIX}-python-six"
+         "${MINGW_PACKAGE_PREFIX}-python-pbr"
+         "${MINGW_PACKAGE_PREFIX}-python-cmd2"
+         "${MINGW_PACKAGE_PREFIX}-python-prettytable"
+         "${MINGW_PACKAGE_PREFIX}-python-pyparsing"
+         "${MINGW_PACKAGE_PREFIX}-python-stevedore"
+         "${MINGW_PACKAGE_PREFIX}-python-yaml")
+makedepends=('git'
+             "${MINGW_PACKAGE_PREFIX}-python-setuptools")
+#checkdepends=("${MINGW_PACKAGE_PREFIX}-python-testrepository"
+#              "${MINGW_PACKAGE_PREFIX}-python-mock"
+#              "${MINGW_PACKAGE_PREFIX}-python-sphinx"
+#              "${MINGW_PACKAGE_PREFIX}-python-oslosphinx"
+#              "${MINGW_PACKAGE_PREFIX}-python-testscenarios")
 options=('staticlibs' 'strip' '!debug')
-source=("${_realname}-$pkgver.tar.gz::https://github.com/openstack/cliff/archive/${pkgver}.tar.gz")
-sha512sums=('4d789c683bd23a624beb0cbcb2cae2a31858b7da3625b5c15d274a25195d27f41ea0dc949e00dc381457d6a31ba5221160c23e347767edfd0babb4bd41c373f6')
+source=("${_realname}-${pkgver}.tar.gz::https://github.com/openstack/cliff/archive/${pkgver}.tar.gz"
+        "01-requirements-cmd2.patch"
+        "02-cmd2-interactive.py.patch")
+sha256sums=('1fc2631b980f1a0a78c42f4f933d47f7220dd441b5da6946362020a590e93f32'
+            '52fea9bc186ce7e9f13aff719080c4392ce17ebbae6910ac218f08c7d16515ba'
+            '2d40a800084ebf4958f7c6d81ae7a4951b864481de8dfd17eb48343de3c0baed')
 
 # Helper macros to help make tasks easier #
 apply_patch_with_msg() {
@@ -59,89 +54,40 @@ del_file_exists() {
 # =========================================== #
 
 prepare() {
-  cd "${srcdir}"
-#  pushd "${_realname}-${pkgver}"
-#    apply_patch_with_msg 0001-A-really-important-fix.patch \
-#      0002-A-less-important-fix.patch
-#  popd 
-  for builddir in python{2,3}-build-${CARCH}; do
-    rm -rf ${builddir} | true
-    cp -r "${_realname}-${pkgver}" "${builddir}"
-  done
-  # Set version for setuptools_scm
-  export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
-  export PBR_VERSION=$pkgver
+  cd "${srcdir}"/${_realname}-${pkgver}
+
+  # https://git.archlinux.org/svntogit/community.git/tree/trunk/new-cmd2.patch?h=packages/python-cliff
+  apply_patch_with_msg \
+    01-requirements-cmd2.patch \
+    02-cmd2-interactive.py.patch
 }
 
-# Note that build() is sometimes skipped because it's done in 
-# the packages setup.py install for simplicity if you can do so.
-# but sometimes, you want to do a check before install which would
-# also trigger the build.
 build() {
-  for pver in {2,3}; do  
-    msg "Python ${pver} build for ${CARCH}"  
-    cd "${srcdir}/python${pver}-build-${CARCH}"
-    ${MINGW_PREFIX}/bin/python${pver} setup.py build
-  done  
+  msg "Python build for ${CARCH}"  
+
+  rm -rf python-build-${CARCH} | true
+  cp -r "${_realname}-${pkgver}" "python-build-${CARCH}"
+
+  # Set version for setuptools_scm
+  export SETUPTOOLS_SCM_PRETEND_VERSION=${pkgver}
+  export PBR_VERSION=${pkgver}
+  
+  cd "${srcdir}/python-build-${CARCH}"
+  ${MINGW_PREFIX}/bin/python setup.py build
 }
 
 #check() {
-#  for pver in {2,3}; do
-#    msg "Python ${pver} test for ${CARCH}"
-#    cd "${srcdir}/python${pver}-build-${CARCH}"
-#    PYTHON=${MINGW_PREFIX}/bin/python${pver} 
-#       ${MINGW_PREFIX}/bin/python${pver} setup.py testr
-#  done
+#  msg "Python test for ${CARCH}"
+#  cd "${srcdir}/python-build-${CARCH}"
+#  PYTHON=${MINGW_PREFIX}/bin/python3 \
+#     ${MINGW_PREFIX}/bin/python setup.py testr
 #}
 
-package_python3-cliff() {
-  depends=("${MINGW_PACKAGE_PREFIX}-python3-six"
-           "${MINGW_PACKAGE_PREFIX}-python3-pbr"
-           "${MINGW_PACKAGE_PREFIX}-python3-cmd2"
-           "${MINGW_PACKAGE_PREFIX}-python3-prettytable"
-           "${MINGW_PACKAGE_PREFIX}-python3-pyparsing"
-           "${MINGW_PACKAGE_PREFIX}-python3-stevedore"
-           "${MINGW_PACKAGE_PREFIX}-python3-yaml")
-
-  cd "${srcdir}/python3-build-${CARCH}"
+package() {
+  cd "${srcdir}/python-build-${CARCH}"
   MSYS2_ARG_CONV_EXCL="--prefix=;--install-scripts=;--install-platlib=" \
-  ${MINGW_PREFIX}/bin/python3 setup.py install --prefix=${MINGW_PREFIX} \
+  ${MINGW_PREFIX}/bin/python setup.py install --prefix=${MINGW_PREFIX} \
     --root="${pkgdir}" --optimize=1 --skip-build
 
-  install -Dm644 LICENSE "${pkgdir}${MINGW_PREFIX}/share/licenses/python3-${_realname}/LICENSE"
-}
-
-package_python2-cliff() {
-  depends=("${MINGW_PACKAGE_PREFIX}-python2"
-           "${MINGW_PACKAGE_PREFIX}-python2-six" 
-           "${MINGW_PACKAGE_PREFIX}-python2-pbr" 
-           "${MINGW_PACKAGE_PREFIX}-python2-cmd2" 
-           "${MINGW_PACKAGE_PREFIX}-python2-prettytable"
-           "${MINGW_PACKAGE_PREFIX}-python2-pyparsing"
-           "${MINGW_PACKAGE_PREFIX}-python2-stevedore"
-           "${MINGW_PACKAGE_PREFIX}-python2-unicodecsv"
-           "${MINGW_PACKAGE_PREFIX}-python2-yaml")
-
-  cd "${srcdir}/python2-build-${CARCH}"
-  MSYS2_ARG_CONV_EXCL="--prefix=;--install-scripts=;--install-platlib=" \
-  ${MINGW_PREFIX}/bin/python2 setup.py install --prefix=${MINGW_PREFIX} \
-    --root="${pkgdir}" --optimize=1 --skip-build
-
-  install -Dm644 LICENSE "${pkgdir}${MINGW_PREFIX}/share/licenses/python2-${_realname}/LICENSE"
-}
-
-package_mingw-w64-i686-python2-cliff() {
-  package_python2-cliff
-}
-
-package_mingw-w64-i686-python3-cliff() {
-  package_python3-cliff
-}
-
-package_mingw-w64-x86_64-python2-cliff() {
-  package_python2-cliff
-}
-
-package_mingw-w64-x86_64-python3-cliff() {
-  package_python3-cliff
+  install -Dm644 LICENSE "${pkgdir}${MINGW_PREFIX}/share/licenses/python-${_realname}/LICENSE"
 }

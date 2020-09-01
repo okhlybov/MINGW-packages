@@ -3,20 +3,27 @@
 _realname=libhandy
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=0.0.10
-pkgrel=1
+pkgver=0.90.0
+pkgrel=2
 pkgdesc="A library full of GTK+ widgets for mobile phones (mingw-w64)"
-url="https://source.puri.sm/Librem5/libhandy"
-license=("LGPL2.1")
+url="https://gitlab.gnome.org/GNOME/libhandy"
+license=("LGPL2.1+")
 arch=('any')
-depends=("${MINGW_PACKAGE_PREFIX}-gtk3")
-makedepends=("${MINGW_PACKAGE_PREFIX}-meson"
+depends=("${MINGW_PACKAGE_PREFIX}-glib2"
+         "${MINGW_PACKAGE_PREFIX}-gtk3")
+makedepends=("${MINGW_PACKAGE_PREFIX}-glade"
+             "${MINGW_PACKAGE_PREFIX}-meson"
+             "${MINGW_PACKAGE_PREFIX}-ninja"
              "${MINGW_PACKAGE_PREFIX}-pkg-config"
              "${MINGW_PACKAGE_PREFIX}-vala"
              "${MINGW_PACKAGE_PREFIX}-gobject-introspection")
 options=('strip' 'staticlibs' '!debug')
-source=("https://source.puri.sm/Librem5/libhandy/-/archive/v${pkgver}/libhandy-v${pkgver}.tar.bz2")
-sha256sums=('366350c0c15f53b8de4032780de4c5a5c41dfe2001d7b3d39ec6399123c2cb73')
+source=("https://download.gnome.org/sources/libhandy/${pkgver:0:4}/libhandy-${pkgver}.tar.xz")
+sha256sums=('6ab0869a3aa483298ea20ec89d4c14c38ba4de416b33181d21e15a6039df5985')
+
+prepare() {
+  cd libhandy-${pkgver}
+}
 
 build() {
   [[ -d "${srcdir}"/build-${CARCH} ]] && rm -rf "${srcdir}"/build-${CARCH}
@@ -26,8 +33,8 @@ build() {
     --buildtype=plain \
     -Dexamples=false \
     -Dgtk_doc=false \
-    -Dglade_catalog=disabled \
-    ../"libhandy-v${pkgver}"
+    -Dglade_catalog=enabled \
+    ../"libhandy-${pkgver}"
 
   ${MINGW_PREFIX}/bin/ninja
 }
@@ -35,4 +42,10 @@ build() {
 package() {
   cd "${srcdir}"/build-${CARCH}
   DESTDIR="${pkgdir}${MINGW_PREFIX}" ${MINGW_PREFIX}/bin/ninja install
+  
+  local _PRE_WIN="$(cygpath -m ${MINGW_PREFIX})"
+
+  for pcfile in  "${pkgdir}${MINGW_PREFIX}"/lib/pkgconfig/*.pc; do
+    sed -s "s|${_PRE_WIN}|${MINGW_PREFIX}|g" -i "${pcfile}"
+  done
 }

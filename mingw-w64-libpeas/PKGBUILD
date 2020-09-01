@@ -3,7 +3,7 @@
 _realname=libpeas
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=1.24.0
+pkgver=1.26.0
 pkgrel=1
 pkgdesc="A GObject-based plugins engine (mingw-w64)"
 arch=('any')
@@ -14,7 +14,6 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-gcc"
              "${MINGW_PACKAGE_PREFIX}-gobject-introspection"
              "${MINGW_PACKAGE_PREFIX}-pkg-config"
              "${MINGW_PACKAGE_PREFIX}-python3-gobject"
-             "${MINGW_PACKAGE_PREFIX}-python2-gobject"
              "${MINGW_PACKAGE_PREFIX}-gtk-doc"
              "${MINGW_PACKAGE_PREFIX}-meson"
              "${MINGW_PACKAGE_PREFIX}-ninja")
@@ -26,8 +25,8 @@ options=('strip' 'staticlibs')
 install=${_realname}-${CARCH}.install
 source=(https://download.gnome.org/sources/${_realname}/${pkgver:0:4}/${_realname}-${pkgver}.tar.xz
         fix-build.patch)
-sha256sums=('0b9a00138c129a663de3eef5569b00ace03ce31d345f7af783768e9f35c8e6f9'
-            'c0b31cfc9d1206870408339b7ec7fdc9d4e8cdbf6926215de2c85d681911e068')
+sha256sums=('a976d77e20496479a8e955e6a38fb0e5c5de89cf64d9f44e75c2213ee14f7376'
+            'e1874d9338c05e5f064ef7e84e38776d18d86b1e3ca661bb83d38c0126317c7a')
 
 prepare() {
   cd ${srcdir}/${_realname}-${pkgver}
@@ -45,7 +44,7 @@ build() {
     -Ddemos=true \
     -Dwidgetry=true \
     -Dgtk_doc=true \
-    -Dpython2=true \
+    -Dpython2=false \
     ../${_realname}-${pkgver}
 
   ninja

@@ -1,13 +1,20 @@
-MINGW-packages
-==============
-[![AppVeyor status](https://ci.appveyor.com/api/projects/status/github/Alexpux/mingw-packages?branch=master&svg=true)](https://ci.appveyor.com/project/Alexpux/mingw-packages)
+<p align="center">
+  <a title="msys2.github.io" href="https://msys2.github.io"><img src="https://img.shields.io/website.svg?label=msys2.github.io&longCache=true&style=flat-square&url=http%3A%2F%2Fmsys2.github.io%2Findex.html&logo=github"></a><!--
+  -->
+  <a title="Join the chat at https://gitter.im/msys2/msys2" href="https://gitter.im/msys2/msys2"><img src="https://img.shields.io/badge/chat-on%20gitter-4db797.svg?longCache=true&style=flat-square&logo=gitter&logoColor=e8ecef"></a><!--
+  -->
+  <a title="GitHub Actions" href="https://github.com/msys2/MINGW-packages/actions?query=workflow%3Amain"><img alt="'main' workflow Status" src="https://img.shields.io/github/workflow/status/msys2/MINGW-packages/main?longCache=true&style=flat-square&label=build&logo=github"></a><!--
+  -->
+</p>
+
+# MINGW-packages
 
 This repository contains package scripts for MinGW-w64 targets to build under MSYS2.
 
 MSYS2 is an independent rewrite of MSYS providing a Unix-like environment and command-line interface for Windows making it possible to port software running on POSIX systems (such as Linux, BSD, and Unix systems) to Windows.
 
 ## Documentation
-See the [MSYS2 wiki](https://github.com/msys2/msys2/wiki).
+See the [MSYS2 website](https://www.msys2.org/wiki/Home).
 
 ## Using packages
 You have two options if you want to use these packages:
@@ -33,4 +40,9 @@ You have two options if you want to use these packages:
  ```
 
 ## Creating packages
-See the [MSYS2 wiki](https://github.com/msys2/msys2/wiki/Creating-Packages) for instructions and advice about creating MINGW-packages.
+See the [MSYS2 documentation](https://www.msys2.org/wiki/Creating-Packages) for instructions and advice about creating MINGW-packages.
+
+## License
+
+MSYS2-packages is licensed under BSD 3-Clause "New" or "Revised" License.
+A full copy of the license is provided in [LICENSE](LICENSE).

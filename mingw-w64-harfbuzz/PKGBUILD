@@ -4,8 +4,8 @@
 _realname=harfbuzz
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=2.6.4
-pkgrel=2
+pkgver=2.7.2
+pkgrel=1
 pkgdesc="OpenType text shaping engine (mingw-w64)"
 arch=('any')
 url="https://www.freedesktop.org/wiki/Software/HarfBuzz"
@@ -15,23 +15,26 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-gcc"
              "${MINGW_PACKAGE_PREFIX}-gobject-introspection"
              "${MINGW_PACKAGE_PREFIX}-pkg-config"
              "${MINGW_PACKAGE_PREFIX}-cairo"
-             "${MINGW_PACKAGE_PREFIX}-python2"
+             "${MINGW_PACKAGE_PREFIX}-python"
+             "${MINGW_PACKAGE_PREFIX}-meson"
+             "${MINGW_PACKAGE_PREFIX}-ninja"
              "${MINGW_PACKAGE_PREFIX}-ragel")
 depends=("${MINGW_PACKAGE_PREFIX}-freetype"
          "${MINGW_PACKAGE_PREFIX}-gcc-libs"
          "${MINGW_PACKAGE_PREFIX}-glib2"
          "${MINGW_PACKAGE_PREFIX}-graphite2")
-checkdepends=("${MINGW_PACKAGE_PREFIX}-python3-fonttools" 
-              "${MINGW_PACKAGE_PREFIX}-python3-setuptools")
+checkdepends=("${MINGW_PACKAGE_PREFIX}-python-fonttools" 
+              "${MINGW_PACKAGE_PREFIX}-python-setuptools")
 options=('strip' 'staticlibs')
 optdepends=("${MINGW_PACKAGE_PREFIX}-icu: harfbuzz-icu support"
             "${MINGW_PACKAGE_PREFIX}-cairo: hb-view program")
-source=("https://www.freedesktop.org/software/harfbuzz/release/${_realname}-${pkgver}.tar.xz")
-sha256sums=('9413b8d96132d699687ef914ebb8c50440efc87b3f775d25856d7ec347c03c12')
+source=("https://github.com/harfbuzz/harfbuzz/archive/${pkgver}.tar.gz")
+sha256sums=('8ec112ee108642477478b75fc7906422abed404d7530e47ba0a4875f553f1b59')
+noextract=("${pkgver}.tar.gz")
 
 prepare() {
+  tar -xzf ${srcdir}/${pkgver}.tar.gz -C ${srcdir} || true
   cd "${srcdir}/${_realname}-${pkgver}"
-  #autoreconf -fi
 }
 
 build() {
@@ -40,71 +43,65 @@ build() {
   export _static_dir="${srcdir}/build-${MINGW_CHOST}-static"
   export _shared_dir="${srcdir}/build-${MINGW_CHOST}-shared"
 
-  # static build
-  [[ -d "${_static_dir}" ]] && rm -rf "${_static_dir}"
+ [[ -d "${_static_dir}" ]] && rm -rf "${_static_dir}"
   mkdir -p "${_static_dir}" && pushd "${_static_dir}"
+
+  # static build
   CFLAGS="${CFLAGS} -DGRAPHITE2_STATIC" \
   CXXFLAGS="${CXXFLAGS} -DGRAPHITE2_STATIC" \
-  ../${_realname}-${pkgver}/configure \
-    --prefix=${MINGW_PREFIX} \
-    --build=${MINGW_CHOST} \
-    --host=${MINGW_CHOST} \
-    --enable-shared=no \
-    --enable-static=yes \
-    --enable-introspection \
-    --with-graphite2=yes \
-    --with-uniscribe=yes \
-    --with-directwrite=yes \
-    --with-gobject
-  make
+  ${MINGW_PREFIX}/bin/meson \
+    --buildtype plain \
+    --wrap-mode=nofallback \
+    --default-library=static \
+    -Dauto_features=enabled \
+    -Dintrospection=disabled \
+    -Dgobject=enabled \
+    -Dicu=enabled \
+    -Dgdi=enabled \
+    -Dgraphite=enabled \
+    -Ddirectwrite=enabled \
+    ../${_realname}-${pkgver}
+
+  ninja
   popd
 
   # shared build
   [[ -d "${_shared_dir}" ]] && rm -rf "${_shared_dir}"
   mkdir -p "${_shared_dir}" && pushd "${_shared_dir}"
-  ../${_realname}-${pkgver}/configure \
-    --prefix=${MINGW_PREFIX} \
-    --build=${MINGW_CHOST} \
-    --host=${MINGW_CHOST} \
-    --enable-shared=yes \
-    --enable-static=no \
-    --enable-introspection \
-    --with-graphite2=yes \
-    --with-uniscribe=yes \
-    --with-directwrite=yes \
-    --with-gobject
-  make
+
+  ${MINGW_PREFIX}/bin/meson \
+    --buildtype plain \
+    --wrap-mode=nofallback \
+    --default-library=shared \
+    -Dauto_features=enabled \
+    -Dintrospection=enabled \
+    -Dgobject=enabled \
+    -Dicu=enabled \
+    -Dgdi=enabled \
+    -Dgraphite=enabled \
+    -Ddirectwrite=enabled \
+    ../${_realname}-${pkgver}
+
+  ninja
   popd
 }
 
 check(){
-  local _static_dir="${srcdir}/build-${MINGW_CHOST}-static"
-  local _shared_dir="${srcdir}/build-${MINGW_CHOST}-shared"
+  cd "${srcdir}/build-${MINGW_CHOST}-shared"
 
-  # static build 
-  pushd "${_static_dir}"
-  make check || true
-  popd
-
-  # shared build
-  pushd "${_shared_dir}"
-  make check || true
-  popd
+  meson test
 }
 
 package() {
-  local _static_dir="${srcdir}/build-${MINGW_CHOST}-static"
-  local _shared_dir="${srcdir}/build-${MINGW_CHOST}-shared"
+  cd "${srcdir}/build-${MINGW_CHOST}-static"
+  DESTDIR="${pkgdir}${MINGW_PREFIX}" ninja install
 
-  # static build
-  pushd "${_static_dir}"
-  make DESTDIR="${pkgdir}" install
-  popd
+  cd "${srcdir}/build-${MINGW_CHOST}-shared"
+  DESTDIR="${pkgdir}${MINGW_PREFIX}" ninja install
 
-  # shared build
-  pushd "${_shared_dir}"
-  make DESTDIR="${pkgdir}" install
-  popd
+  for pcfile in  "${pkgdir}${MINGW_PREFIX}"/lib/pkgconfig/*.pc; do
+    sed -s "s|$(cygpath -m ${MINGW_PREFIX})|${MINGW_PREFIX}|g" -i "${pcfile}"
+  done
 
   install -Dm644 "${srcdir}/${_realname}-${pkgver}/COPYING" "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}/COPYING"
 }

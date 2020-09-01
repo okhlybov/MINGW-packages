@@ -3,27 +3,32 @@
 _realname=groonga
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=9.0.9
+pkgver=10.0.6
 pkgrel=1
 pkgdesc="An opensource fulltext search engine (mingw-w64)"
 arch=('any')
 url="http://groonga.org/"
 license=('LGPL2')
 options=('strip' 'staticlibs')
-source=("https://packages.groonga.org/source/${_realname}/${_realname}-${pkgver}.tar.gz")
+source=(https://packages.groonga.org/source/${_realname}/${_realname}-${pkgver}.tar.gz{,.asc})
 depends=("${MINGW_PACKAGE_PREFIX}-arrow"
          #"${MINGW_PACKAGE_PREFIX}-libevent"
+         "${MINGW_PACKAGE_PREFIX}-luajit"
          "${MINGW_PACKAGE_PREFIX}-lz4"
          "${MINGW_PACKAGE_PREFIX}-msgpack-c"
          "${MINGW_PACKAGE_PREFIX}-onigmo"
          "${MINGW_PACKAGE_PREFIX}-openssl"
          "${MINGW_PACKAGE_PREFIX}-pcre"
          "${MINGW_PACKAGE_PREFIX}-rapidjson"
+         "${MINGW_PACKAGE_PREFIX}-mecab"
+         "${MINGW_PACKAGE_PREFIX}-mecab-naist-jdic"
          "${MINGW_PACKAGE_PREFIX}-zeromq"
          "${MINGW_PACKAGE_PREFIX}-zlib"
          "${MINGW_PACKAGE_PREFIX}-zstd")
 makedepends=("${MINGW_PACKAGE_PREFIX}-gcc")
-sha256sums=('09767f0295b3321d8b41802c5a190ac3b0118f4b9106422754b448f4d801ae2b')
+sha256sums=('6932252fe5d13cf6651600c9e4f1b0ed14836cc7d9ee87e091f698c4a4e97de0'
+            'SKIP')
+validpgpkeys=('2701F317CFCCCB975CADE9C2624CF77434839225') # Groonga Key <packages@groonga.org>
 
 build() {
   [[ -d ${srcdir}/build-${CARCH} ]] && rm -rf ${srcdir}/build-${CARCH}
@@ -35,8 +40,8 @@ build() {
     --host=${MINGW_CHOST} \
     --target=${MINGW_CHOST} \
     --disable-libedit \
+    --with-mecab \
     --with-onigmo=system \
-    --without-mecab \
     --without-kytea \
     --without-cutter \
     --without-libevent \

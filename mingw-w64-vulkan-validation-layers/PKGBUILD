@@ -4,8 +4,8 @@
 _realname=Vulkan-ValidationLayers
 pkgbase=mingw-w64-vulkan-validation-layers
 pkgname=("${MINGW_PACKAGE_PREFIX}-vulkan-validation-layers")
-pkgver=1.1.112
-pkgrel=1
+pkgver=1.2.148
+pkgrel=2
 pkgdesc='Vulkan Validation Layers (mingw-w64)'
 arch=('any')
 url="https://www.khronos.org/vulkan/"
@@ -15,16 +15,17 @@ depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs"
          "${MINGW_PACKAGE_PREFIX}-vulkan-loader")
 makedepends=("${MINGW_PACKAGE_PREFIX}-cmake"
              "${MINGW_PACKAGE_PREFIX}-glslang"
-             "${MINGW_PACKAGE_PREFIX}-python3"
+             "${MINGW_PACKAGE_PREFIX}-python"
+             "${MINGW_PACKAGE_PREFIX}-spirv-headers"
              "${MINGW_PACKAGE_PREFIX}-spirv-tools")
-source=(${_realname}-${pkgver}.tar.gz::"https://github.com/KhronosGroup/${_realname}/archive/v${pkgver}.tar.gz"
+source=("${_realname}-${pkgver}.tar.gz"::"https://github.com/KhronosGroup/${_realname}/archive/v${pkgver}.tar.gz"
         001-build-fix.patch
         002-proper-def-files-for-32bit.patch
         003-install-layout.patch)
-sha256sums=('6ba1a0d8082975b4ac39ae01be5e1d5e722247a14a8ac20ce0e9d21a09bfc268'
+sha256sums=('da43a161e280cd7dce63a18e929efb586f08024d23b2ee205437f7949a8063fc'
             '1ad7c68024636709c43a7f039f382c0c0d1b87f97a7b13db067c233c31f8ea5f'
-            '9295dfe1870d65caba0943fac7787aa693b690c66f9b5eefba8a45ae4cdffd02'
-            '2fb39fdbc02e2adf94d2ef5ed4117b1cc9391a6bfde5a8a259eaeb883beb2ba2')
+            '6fb0f9e4b2fb2903a50d0b4bbce06e8e8f5ed1045b8d7c875067e0fb2aa6ebb9'
+            'c158197f8bcb39e540e4156597f3ca6c4b97a007070f882dec5dec68bd72814d')
 
 prepare() {
   cd ${srcdir}/${_realname}-${pkgver}
@@ -37,25 +38,35 @@ build() {
   [[ -d ${srcdir}/build-${CARCH} ]] && rm -rf ${srcdir}/build-${CARCH}
   mkdir -p ${srcdir}/build-${CARCH} && cd ${srcdir}/build-${CARCH}
 
-  CFLAGS+=" -D__STDC_FORMAT_MACROS" \
+  declare -a extra_config
+  if check_option "debug" "n"; then
+    extra_config+=("-DCMAKE_BUILD_TYPE=Release")
+  else
+    extra_config+=("-DCMAKE_BUILD_TYPE=Debug")
+  fi
+
+  CFLAGS+=" -D__STDC_FORMAT_MACROS -Wno-unused-function" \
   CPPFLAGS+=" -D__STDC_FORMAT_MACROS" \
-  CXXFLAGS+=" -D__USE_MINGW_ANSI_STDIO -D__STDC_FORMAT_MACROS -fpermissive" \
+  CXXFLAGS+=" -D__USE_MINGW_ANSI_STDIO -D__STDC_FORMAT_MACROS -fpermissive -Wno-unused-function" \
   MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
   ${MINGW_PREFIX}/bin/cmake \
     -G"MSYS Makefiles" \
-    -DCMAKE_BUILD_TYPE=Release \
+    "${extra_config[@]}" \
     -DCMAKE_INSTALL_PREFIX=${MINGW_PREFIX} \
     -DGLSLANG_INSTALL_DIR=${MINGW_PREFIX} \
-    -DBUILD_LAYER_SUPPORT_FILES=OFF \
+    -DSPIRV_HEADERS_INSTALL_DIR=${MINGW_PREFIX} \
+    -DBUILD_LAYER_SUPPORT_FILES=ON \
+    -DCMAKE_INSTALL_INCLUDEDIR=include/vulkan \
     -DBUILD_TESTS=OFF \
     ../${_realname}-${pkgver}
 
-  make
+  ${MINGW_PREFIX}/bin/cmake --build ./
 }
 
 package() {
   cd ${srcdir}/build-${CARCH}
-  make DESTDIR="${pkgdir}" install
+  DESTDIR="${pkgdir}" ${MINGW_PREFIX}/bin/cmake --build ./ --target install
 
+  install -Dm644 ${srcdir}/${_realname}-${pkgver}/docs/* -t ${pkgdir}${MINGW_PREFIX}/share/doc/vulkan-validation-layers/
   install -Dm644 ${srcdir}/${_realname}-${pkgver}/LICENSE.TXT ${pkgdir}${MINGW_PREFIX}/share/licenses/vulkan-validation-layers/LICENSE
 }

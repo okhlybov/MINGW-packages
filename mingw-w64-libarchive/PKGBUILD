@@ -3,8 +3,8 @@
 _realname=libarchive
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=3.4.0
-pkgrel=2
+pkgver=3.4.3
+pkgrel=1
 pkgdesc="Multi-format archive and compression library (mingw-w64)"
 arch=('any')
 url="https://www.libarchive.org/"
@@ -15,7 +15,6 @@ depends=(${MINGW_PACKAGE_PREFIX}-gcc-libs
          ${MINGW_PACKAGE_PREFIX}-expat
          ${MINGW_PACKAGE_PREFIX}-libiconv
          ${MINGW_PACKAGE_PREFIX}-lz4
-         ${MINGW_PACKAGE_PREFIX}-lzo2
          ${MINGW_PACKAGE_PREFIX}-libsystre
          ${MINGW_PACKAGE_PREFIX}-nettle
          ${MINGW_PACKAGE_PREFIX}-openssl
@@ -23,9 +22,9 @@ depends=(${MINGW_PACKAGE_PREFIX}-gcc-libs
          ${MINGW_PACKAGE_PREFIX}-zlib
          ${MINGW_PACKAGE_PREFIX}-zstd)
 options=('!libtool' 'strip')
-source=("${_realname}-${pkgver}.tar.gz"::"https://github.com/libarchive/libarchive/archive/v${pkgver}.tar.gz"
+source=("${_realname}-${pkgver}.tar.gz"::"https://libarchive.org/downloads/${_realname}-${pkgver}.tar.gz"
         "0001-libarchive-3.3.3-bcrypt-fix.patch")
-sha256sums=('c160d3c45010a51a924208f13f6b7b956dabdf8c5c60195df188a599028caa7c'
+sha256sums=('19556c1c67aacdff547fd719729630444dbc7161c63eca661a310676a022bb01'
             '2c318a025029998a9389eb99ab80f733c0fcf3b4888421879f2f6b4530d7f522')
 
 prepare() {
@@ -42,8 +41,14 @@ build() {
     --host="${MINGW_CHOST}" \
     --target="${MINGW_CHOST}" \
     --prefix="${MINGW_PREFIX}" \
-    --without-xml2
+    --without-xml2 \
+    --without-lzo2
   make
+}
+
+check() {
+  cd "${srcdir}/build-${MINGW_CHOST}"
+  make check
 }
 
 package() {

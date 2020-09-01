@@ -3,26 +3,35 @@
 _realname=scotch
 
 pkgbase=mingw-w64-${_realname}
-pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}" "${MINGW_PACKAGE_PREFIX}-pt${_realname}")
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgdesc='Graph partitioning and sparse matrix ordering package (mingw-w64)'
 pkgver=6.0.9
 pkgrel=1
 arch=('any')
+depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs")
 makedepends=("${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-msmpi" "${MINGW_PACKAGE_PREFIX}-libgnurx")
 options=('strip' 'staticlibs')
 license=('CeCILL-C')
 url="http://www.labri.fr/perso/pelegrin/scotch/"
-source=("https://gforge.inria.fr/frs/download.php/file/38187/${_realname}_${pkgver}.tar.gz")
-sha256sums=('622b4143cf01c480bb15708b3651b29c25e4aeb00c8c6447ff196aca2eca5c93')
-
+source=("https://gforge.inria.fr/frs/download.php/file/38187/${_realname}_${pkgver}.tar.gz"
+		"0001-makefile.inc.patch"
+		"0002-pipe-fix.patch"
+		"0003-thread-fix.patch"
+		"0004-dummysizes-regex.patch"
+)
+sha256sums=('622b4143cf01c480bb15708b3651b29c25e4aeb00c8c6447ff196aca2eca5c93'
+            '2c55b1e99a8d40c976e7147aa9102db2d1c489da1b760e526b424bf5ffd12716'
+            '49d87533321504a9594d7bb4659fbced5afadd2fc0d73f0577b0b3ad47cc7d0f'
+            '8a02cea7cdc3c685776012b2bb42cec8c5e98c435bdf1ffd62abf5ab6def9fbb'
+            '92908a6598d333a35a3b76650c111a082304e9dfff7c9bc0667d6af62de47c14')
 
 prepare() {
   cd "${srcdir}/${_realname}_${pkgver}"
-  for p in ${srcdir}/../*.patch; do
-	patch -p1 < $p
+  for p in ${source[*]:1}; do
+	patch -p1 -i "$srcdir/$p"
   done
 }
 
-# TODO get rid of ptherads dll dependency which gets injected even for the single-threaded library
 build() {
   cd "${srcdir}/${_realname}_${pkgver}/src"
   make -j1 scotch ptscotch esmumps ptesmumps
@@ -31,98 +40,46 @@ build() {
   mpicc -shared -o libpt${_realname}.dll -Wl,--enable-auto-import -Wl,--export-all-symbols -Wl,--output-def,libpt${_realname}.def -Wl,--out-implib,libpt${_realname}.dll.a -Wl,--whole-archive libpt${_realname}.a libpt${_realname}err.a -Wl,--no-whole-archive -L. -l${_realname}
 }
 
-eval "package_${MINGW_PACKAGE_PREFIX}-${_realname}() { _scotch; }"
-
-_scotch() {
-  pkgdesc="Sequential sparse matrix ordering package (mingw-w64)"
-  depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs")
-_pc="
-prefix=${MINGW_PREFIX}
-libdir=\${prefix}/lib
-includedir=\${prefix}/include
-Name: scotch
-URL: ${url}
-Version: ${pkgver}
-Description: ${pkgdesc}
-Cflags: -I\${includedir}
-Libs.private: -lscotcherr
-Libs: -L\${libdir} -lscotch
-"
-_espc="
-prefix=${MINGW_PREFIX}
-libdir=\${prefix}/lib
-includedir=\${prefix}/include
-Name: esmumps
-URL: ${url}
-Version: ${pkgver}
-Description: Scotch intergation layer for MUMPS (mingw-w64)
-Requires: scotch
-Cflags: -I\${includedir}
-Libs: -L\${libdir} -lesmumps
-"
-  cd "$srcdir/${_realname}_${pkgver}"
+package() {
+  cd "${srcdir}/${_realname}_${pkgver}"
   mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,lib,include}
   mkdir -p "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig"
-  echo "${_pc}" > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/scotch.pc"
-  echo "${_espc}" > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/esmumps.pc"
+  echo "
+	prefix=${MINGW_PREFIX}
+	libdir=\${prefix}/lib
+	includedir=\${prefix}/include
+	Name: scotch
+	URL: ${url}
+	Version: ${pkgver}
+	Description: Serial graph partitioning and sparse matrix ordering package
+	Cflags: -I\${includedir}
+	Libs.private: -lscotcherr
+	Libs: -L\${libdir} -lscotch
+  " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/scotch.pc"
+  echo "
+	prefix=${MINGW_PREFIX}
+	libdir=\${prefix}/lib
+	includedir=\${prefix}/include
+	Name: ptscotch
+	URL: ${url}
+	Version: ${pkgver}
+	Description: Parallel graph partitioning and sparse matrix ordering package
+	Requires: scotch
+	Requires.private: msmpi
+	Cflags: -I\${includedir}
+	Libs.private: -lptscotcherr
+	Libs: -L\${libdir} -lptscotch
+  " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/ptscotch.pc"
   (
     cd include
-	install -m644 esmumps.h scotch*.h "${pkgdir}${MINGW_PREFIX}/include"
+	install -m644 *.h "${pkgdir}${MINGW_PREFIX}/include"
+	cd "${pkgdir}${MINGW_PREFIX}/include"
+	mv metis.h scotchmetis.h
+	mv parmetis.h ptscotchparmetis.h
   )
   (
     cd lib
-	install -m644 libes*.a libscotch*.a "${pkgdir}${MINGW_PREFIX}/lib"
-	install -m644 libscotch*.dll  "${pkgdir}${MINGW_PREFIX}/bin"
-	cd "${pkgdir}${MINGW_PREFIX}/lib"
-	rm -rf *metis*a
-  )
-}
-
-eval "package_${MINGW_PACKAGE_PREFIX}-pt${_realname}() { _ptscotch; }"
-
-_ptscotch() {
-  pkgdesc="MPI-aware parallel sparse matrix ordering package (mingw-w64)"
-  depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-scotch")
-_pc="
-prefix=${MINGW_PREFIX}
-libdir=\${prefix}/lib
-includedir=\${prefix}/include
-Name: ptscotch
-URL: ${url}
-Version: ${pkgver}
-Description: ${pkgdesc}
-Requires: scotch
-Requires.private: msmpi
-Cflags: -I\${includedir}
-Libs.private: -lptscotcherr
-Libs: -L\${libdir} -lptscotch
-"
-_espc="
-prefix=${MINGW_PREFIX}
-libdir=\${prefix}/lib
-includedir=\${prefix}/include
-Name: ptesmumps
-URL: ${url}
-Version: ${pkgver}
-Description: PT-Scotch intergation layer for MUMPS (mingw-w64)
-Cflags: -I\${includedir}
-Requires: ptscotch
-Libs: -L\${libdir} -lptesmumps
-"
-  cd "$srcdir/${_realname}_${pkgver}"
-  mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,lib,include}
-  mkdir -p "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig"
-  echo "${_pc}" > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/ptscotch.pc"
-  echo "${_espc}" > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/ptesmumps.pc"
-  (
-    cd include
-	install -m644 ptscotch*.h "${pkgdir}${MINGW_PREFIX}/include" # esmumps.h
-  )
-  (
-    cd lib
-	install -m644 libptes*.a libptscotch*.a "${pkgdir}${MINGW_PREFIX}/lib"
-	install -m644 libptscotch*.dll  "${pkgdir}${MINGW_PREFIX}/bin"
-	cd "${pkgdir}${MINGW_PREFIX}/lib"
-	rm -rf *metis*a
+	install -m644 lib*.a "${pkgdir}${MINGW_PREFIX}/lib"
+	install -m644 lib*.dll  "${pkgdir}${MINGW_PREFIX}/bin"
   )
 }

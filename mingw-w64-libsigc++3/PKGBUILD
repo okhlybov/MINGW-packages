@@ -3,7 +3,7 @@
 _realname=libsigc++
 pkgbase=mingw-w64-${_realname}3
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}3"
-pkgver=2.99.11
+pkgver=3.0.3
 pkgrel=1
 pkgdesc="Libsigc++ implements a full callback system for use in widget libraries - V3 (mingw-w64)"
 arch=('any')
@@ -13,7 +13,11 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-pkg-config")
 depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs")
 options=('staticlibs' 'strip')
 source=("https://download.gnome.org/sources/libsigc++/${pkgver%.*}/${_realname}-${pkgver}.tar.xz")
-sha256sums=('177fb08df33da71780eef2ce4c5991a2b3b6d07d4ad1efbf6ad38f7964e4bb55')
+sha256sums=('e4f4866a894bdbe053e4fb22ccc6bc4b6851fd31a4746fdd20b2cf6e87c6edb6')
+
+prepare() {
+  cd "${srcdir}/${_realname}-${pkgver}"
+}
 
 build() {
   [[ -d "${srcdir}/build-${MINGW_CHOST}" ]] && rm -rf "${srcdir}/build-${MINGW_CHOST}"

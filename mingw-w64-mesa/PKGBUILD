@@ -3,30 +3,31 @@
 _realname=mesa
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=19.2.3
+pkgver=20.1.6
 pkgrel=1
 pkgdesc="Open-source implementation of the OpenGL specification (mingw-w64)"
 arch=('any')
 makedepends=("${MINGW_PACKAGE_PREFIX}-llvm"
              "${MINGW_PACKAGE_PREFIX}-gcc"
-             "${MINGW_PACKAGE_PREFIX}-zlib"
-             "scons"
-             "python2-mako")
+             "${MINGW_PACKAGE_PREFIX}-python-mako"
+             "${MINGW_PACKAGE_PREFIX}-meson"
+             "${MINGW_PACKAGE_PREFIX}-pkg-config")
+depends=("${MINGW_PACKAGE_PREFIX}-zlib")
+optdepends=("${MINGW_PACKAGE_PREFIX}-opengl-man-pages: for the OpenGL API man pages")
 url="https://www.mesa3d.org/"
 license=('MIT')
 options=('staticlibs' 'strip')
 source=(https://mesa.freedesktop.org/archive/${_realname}-${pkgver}.tar.xz{,.sig}
-        001-extra-libs.patch
-        osmesa.pc)
-sha256sums=('5ee6e42504fe41dcc9a6eba26982656a675b2550a640946f463927ed7f1c5047'
+        llvmwrapgen.sh)
+sha256sums=('23bed40114b03ad640c95bfe72cc879ed2f941d0d481b77b5204a1fc567fa93c'
             'SKIP'
-            'bc9bb5013ac80ded47ad164ae1ef58cc9a39784eb4bf61e8c7d654bb273b05a9'
-            'fdf26548336cc7e5700560c6636a87ffa63daa3048fa94cf4a4a0b50890c9327')
+            '3ad048a4c395adf6d24f2e9325d6a125822b323d494149e00d5cc435d16075e4')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D') # Emil Velikov <emil.l.velikov@gmail.com>
 validpgpkeys+=('946D09B5E4C9845E63075FF1D961C596A7203456') # Andres Gomez <tanty@igalia.com>
 validpgpkeys+=('E3E8F480C52ADD73B278EE78E1ECBE07D7D70895') # Juan Antonio Suárez Romero (Igalia, S.L.) <jasuarez@igalia.com>"
 validpgpkeys+=('A5CC9FEC93F2F837CB044912336909B6B25FADFA') # Juan A. Suarez Romero <jasuarez@igalia.com>
 validpgpkeys+=('71C4B75620BC75708B4BDB254C95FAAB3EB073EC') # Dylan Baker <dylan@pnwbakers.com>
+validpgpkeys+=('57551DE15B968F6341C248F68D8E31AFC32428A6') # Eric Engestrom <eric@engestrom.ch>
 
 noextract=(${_realname}-${pkgver}.tar.xz)
 
@@ -63,48 +64,51 @@ prepare() {
   tar -xJf ${srcdir}/${_realname}-${pkgver}.tar.xz -C ${srcdir} || true
 
   cd ${srcdir}/${_realname}-${pkgver}
-# Disable this patch.  llvm-config does not return the proper
-# values and we probably don't need to call it anyway.
 
-#  patch -p1 -i ${srcdir}/001-extra-libs.patch
-}
+# Run and optionally test LLVM Meson wrap generator.
+# Change nollvmconfig value to 1 if you know llvm-config is broken.
 
-buildcmd(){
-  if [ ${_mach} = x86 ]; then
-    scons build=release
-  fi
-  if [ ${_mach} = x86_64 ]; then
-    scons build=release swr=0
-  fi
+# nollvmconfig=0 ${srcdir}/llvmwrapgen.sh
+# /bin/cat ${srcdir}/${_realname}-${pkgver}/subprojects/llvm/meson.build
 }
 
 build() {
   cd ${srcdir}/${_realname}-${pkgver}
-  LLVM=${MINGW_PREFIX} \
-  CFLAGS="-march=core2 -pipe" \
-  CXXFLAGS="-march=core2 -pipe" \
-  LDFLAGS="-static -s" \
   PROCESSOR_ARCHITECTURE="${CARCH}" \
-  buildcmd
+  ${MINGW_PREFIX}/bin/meson ./build/windows-${_mach} \
+  --prefix=${MINGW_PREFIX} \
+  --includedir=include/mesa \
+  --default-library=both \
+  --buildtype=release \
+  --backend=ninja \
+  -Dc_args='-march=core2 -pipe' \
+  -Dcpp_args='-march=core2 -pipe' \
+  -Dc_link_args='-s' \
+  -Dcpp_link_args='-s' \
+  -Dshared-glapi=true \
+  -Dgles1=true \
+  -Dgles2=true \
+  -Dllvm=true \
+  -Dosmesa=gallium \
+  -Dbuild-tests=true
+  ${MINGW_PREFIX}/bin/ninja -C ./build/windows-${_mach}
 }
 
 package() {
-  cd ${srcdir}/${_realname}-${pkgver}
-  mkdir -p ${pkgdir}${MINGW_PREFIX}/bin
-  mkdir -p ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig
-  mkdir -p ${pkgdir}${MINGW_PREFIX}/include/mesa/GL
+  cd ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}
+  DESTDIR=${pkgdir}${MINGW_PREFIX} ${MINGW_PREFIX}/bin/meson install
 
-  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/gallium/targets/libgl-gdi/opengl32.dll ${pkgdir}${MINGW_PREFIX}/bin/
-  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/gallium/targets/graw-gdi/graw.dll ${pkgdir}${MINGW_PREFIX}/bin/
-  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/gallium/targets/graw-gdi/libgraw.a ${pkgdir}${MINGW_PREFIX}/lib/
-  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/gallium/targets/osmesa/osmesa.dll ${pkgdir}${MINGW_PREFIX}/bin/
-  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/gallium/targets/osmesa/libosmesa.a ${pkgdir}${MINGW_PREFIX}/lib/
+# Install graw library
+  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/src/gallium/targets/graw-gdi/graw.dll ${pkgdir}${MINGW_PREFIX}/bin/
+  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/src/gallium/targets/graw-null/graw_null.dll ${pkgdir}${MINGW_PREFIX}/bin/
+  cp -f ${srcdir}/${_realname}-${pkgver}/build/windows-${_mach}/src/gallium/targets/graw-gdi/graw.dll.a ${pkgdir}${MINGW_PREFIX}/lib/
 
-  cp -f ${srcdir}/${_realname}-${pkgver}/include/GL/gl.h ${pkgdir}${MINGW_PREFIX}/include/mesa/GL/
-  cp -f ${srcdir}/${_realname}-${pkgver}/include/GL/osmesa.h ${pkgdir}${MINGW_PREFIX}/include/mesa/GL/
-  cp -f ${srcdir}/osmesa.pc ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/
-  # fixup our .pc file with valid info
-  sed -e "s|/mingw64|${MINGW_PREFIX}|g" \
-    -e "s|8|${pkgver}|g" \
+# fixup .pc files with valid info
+  sed -e "s|$(cygpath -m ${MINGW_PREFIX})|${MINGW_PREFIX}|g" \
+    -e "s|8.0.0|${pkgver}|g" \
     -i ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/osmesa.pc
+  sed -e "s|$(cygpath -m ${MINGW_PREFIX})|${MINGW_PREFIX}|g" \
+    -i ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/glesv1_cm.pc
+  sed -e "s|$(cygpath -m ${MINGW_PREFIX})|${MINGW_PREFIX}|g" \
+    -i ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/glesv2.pc
 }

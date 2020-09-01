@@ -11,20 +11,15 @@
 _realname=blender
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-_basever=2.80
-_minorchar=
-[[ -z ${_minorchar} ]] && {
-  pkgver=${_basever}
-} || {
-  pkgver=${_basever}.${_minorchar}
-}
+pkgver=2.83.1
 pkgrel=1
 pkgdesc="A fully integrated 3D graphics creation suite (mingw-w64)"
 arch=('any')
 license=('GPL')
 # buid conflict with "${MINGW_PACKAGE_PREFIX}-glog"
 url="https://www.blender.org"
-depends=("${MINGW_PACKAGE_PREFIX}-audaspace"
+depends=("${MINGW_PACKAGE_PREFIX}-alembic"
+         "${MINGW_PACKAGE_PREFIX}-audaspace"
          "${MINGW_PACKAGE_PREFIX}-boost"
          "${MINGW_PACKAGE_PREFIX}-llvm"
          "${MINGW_PACKAGE_PREFIX}-eigen3"
@@ -47,13 +42,16 @@ depends=("${MINGW_PACKAGE_PREFIX}-audaspace"
          "${MINGW_PACKAGE_PREFIX}-opencolorio"
          "${MINGW_PACKAGE_PREFIX}-openexr"
          "${MINGW_PACKAGE_PREFIX}-openjpeg2"
+         $([[ "$CARCH" == "x86_64" ]] && echo "${MINGW_PACKAGE_PREFIX}-openimagedenoise")
          "${MINGW_PACKAGE_PREFIX}-openimageio"
          "${MINGW_PACKAGE_PREFIX}-openshadinglanguage"
          #"${MINGW_PACKAGE_PREFIX}-opensubdiv"
+         #"${MINGW_PACKAGE_PREFIX}-openvdb" # there are missing export symbols in openvdb DLL
+         "${MINGW_PACKAGE_PREFIX}-openxr-sdk"
          "${MINGW_PACKAGE_PREFIX}-pcre"
          "${MINGW_PACKAGE_PREFIX}-pugixml"
-         "${MINGW_PACKAGE_PREFIX}-python3"
-         "${MINGW_PACKAGE_PREFIX}-python3-numpy"
+         "${MINGW_PACKAGE_PREFIX}-python"
+         "${MINGW_PACKAGE_PREFIX}-python-numpy"
          "${MINGW_PACKAGE_PREFIX}-SDL2"
          "${MINGW_PACKAGE_PREFIX}-wintab-sdk"
          "${MINGW_PACKAGE_PREFIX}-zlib")
@@ -62,13 +60,12 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-cmake")
 #optdepends=('cuda: cycles renderer cuda support')
 options=(!strip staticlibs !debug)
 install=blender-${CARCH}.install
-source=(https://download.blender.org/source/${_realname}-${_basever}${_minorchar}.tar.gz
+source=(https://download.blender.org/source/${_realname}-${pkgver}.tar.xz
         0001-mingw-buildsystem.patch
         0002-fix-mingw-w64-definitions.patch
         0004-fix-finding-glew.patch
         0005-fix-define-syntax.patch
         0006-mingw-DEBUG-libmv-avoid-too-many-sections.patch
-        0007-mingw-DEBUG-dont-suffix-libs-with-_d.patch
         0008-mingw-use-X11-like-path-layout.patch
         0011-c++11-defines-__i386__-not-i386.patch
         0012-re-enable-SSE-on-mingw-w64-i686.patch
@@ -76,34 +73,40 @@ source=(https://download.blender.org/source/${_realname}-${_basever}${_minorchar
         0015-mingw-python-like-msvc.patch
         0016-mingw-windres.patch
         0017-find-pugixml.patch
-        0018-msvc-stuff.patch
-        0019-fix-casts.patch)
-sha256sums=('cd9d7e505c1f6e63a4f72366ed04d446859977eeb34cde21283aaea6a304a5c0'
-            'ccff7872d39ab846289bf77f8f30bc2dfc10e6c62043b94a0804e062d586082e'
-            '745b0191f381f0e5d8fc4a92973b68d84c6b5b698e07ef7d006db6aad20ca059'
+        0019-fix-casts.patch
+        0020-blendthumb-build.patch
+        0021-comctl32-v6-for-TaskDialogIndirect.patch
+        0022-find-llvm-convert-paths.patch
+        0023-link-errors.patch
+        0025-callback-function-prototype-fix.patch)
+sha256sums=('4344623cd238a773cba5634fb8f0a723e93b7e92d2c247c9d297dd8dbf25a7cd'
+            '52bfd1092414d37330f946bb643f80dffc533bd0c3dd109ce9b252a1b6fe96d7'
+            'c547c988a02195bc0cdfe34a88af58af1ebc253a499eaa75e96ed6b4d3992c54'
             'bcaa5b105463aa2dd9ab0f69ed4d422c23f9ae1a00a93e012c62113489f3db56'
             '87036a005a817bce9edd5fb7f18ba3b7a0b8d309d6f1f9bb0f813c931d889c0d'
             'cb603fd30a2e1421f653a187c3beb8e767d043a0d948213e884095cf0a27a411'
-            'cec381d7b6573c81af7568908aef5e406540a820eab09cd3795d1f98512cb97b'
             'd54db0c21a9760146f91bada1a0a1d7d9a08250783a840a7dd4f55c19b26ccd9'
             '03c6e8d1713b5c66cb4d531aad1b48a89afac1dc75434ad2dc2d4ad17ba09b1a'
             '9de3b8c5d50a67d439082abb6a14a2ce924473ed7c1f411a24ccb735774e39dc'
             '6c3e47c8051345bd7c98acdc8ea592889f650498793fd5053728cec4ac659303'
             '4ac8822d7620661f34327155b6d2d4491c3704dae5de025ced89830fe622f492'
-            '6c789ae62117a50199761438518654786278b103a9011ffad789db3c2438a379'
+            'd5c1c5944ce49982633e5d65cdedfb64d0aaa3bd1c8ae4877c4dfc3e5ae03dac'
             '5ce05eed73408045c78cd1be262393b2c6815b77dd2979964a8090e00a3ce5ac'
-            'aae1bafccfd9492197139f2c26dfb4e61fa665acb1bdd569d06ce043b5e9810b'
-            '14487156fc62c643f36895b91fa42a5d02a8f7e704f85460de1c3c84256f7a8d')
+            'abaa607ea82f2542e7303eddd405534eb93b5e9e8b23c8568e782d62aa7f7b7b'
+            '3b51fa1a7cf3d6afd201efffbbe61ab10ad2dfaba370d95b84214369ba551580'
+            '9f94a11de1502ffc20bb1336ebf2405e5d5b30eb34b45bb0eda1f67c3ccf67f0'
+            '8be734582b9980ad0a3c5a82c200767ce558084f18e3cca11947991a14b0d68a'
+            '5b6da467aaef44691f0c0437926c74d08ee36c8e7fe76c00fc04e50a3064de6c'
+            '61c0873f9c661f80eb189b7391a4c4c1eef2f7db4178177ce7ff7c47342384ae')
 
 prepare() {
-  cd ${srcdir}/${_realname}-${_basever}${_minorchar}
+  cd ${srcdir}/${_realname}-${pkgver}
   [[ -d build_files/cmake/platform/platform_win32_mingw64.cmake ]] && rm build_files/cmake/platform/platform_win32_mingw64.cmake
   patch -p1 -i "${srcdir}"/0001-mingw-buildsystem.patch
   patch -p1 -i "${srcdir}"/0002-fix-mingw-w64-definitions.patch
   patch -p1 -i "${srcdir}"/0004-fix-finding-glew.patch
   patch -p1 -i "${srcdir}"/0005-fix-define-syntax.patch
   patch -p1 -i "${srcdir}"/0006-mingw-DEBUG-libmv-avoid-too-many-sections.patch
-  patch -p1 -i "${srcdir}"/0007-mingw-DEBUG-dont-suffix-libs-with-_d.patch
   patch -p1 -i "${srcdir}"/0008-mingw-use-X11-like-path-layout.patch
   patch -p1 -i "${srcdir}"/0011-c++11-defines-__i386__-not-i386.patch
   patch -p1 -i "${srcdir}"/0012-re-enable-SSE-on-mingw-w64-i686.patch
@@ -111,9 +114,12 @@ prepare() {
   patch -p1 -i "${srcdir}"/0015-mingw-python-like-msvc.patch
   patch -p1 -i "${srcdir}"/0016-mingw-windres.patch
   patch -p1 -i "${srcdir}"/0017-find-pugixml.patch
-  patch -p1 -i "${srcdir}"/0018-msvc-stuff.patch
   patch -p1 -i "${srcdir}"/0019-fix-casts.patch
-
+  patch -p1 -i "${srcdir}"/0020-blendthumb-build.patch
+  patch -p1 -i "${srcdir}"/0021-comctl32-v6-for-TaskDialogIndirect.patch
+  patch -p1 -i "${srcdir}"/0022-find-llvm-convert-paths.patch
+  patch -p1 -i "${srcdir}"/0023-link-errors.patch
+  patch -p1 -i "${srcdir}"/0025-callback-function-prototype-fix.patch
 }
 
 build() {
@@ -137,8 +143,10 @@ build() {
   else
     _btype=Release
   fi
+  
+  export XR_OPENXR_SDK_ROOT_DIR=${MINGW_PREFIX}
 
-  _pyver=$(${MINGW_PREFIX}/bin/python3 -c "import sys;sys.stdout.write('.'.join(map(str, sys.version_info[:2])))")
+  _pyver=$(${MINGW_PREFIX}/bin/python -c "import sys;sys.stdout.write('.'.join(map(str, sys.version_info[:2])))")
 
   MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
   ${MINGW_PREFIX}/bin/cmake \
@@ -155,8 +163,7 @@ build() {
     -DWITH_SYSTEM_EIGEN3=ON \
     -DWITH_INSTALL_PORTABLE=OFF \
     -DWITH_OPENCOLLADA=ON \
-    -DWITH_ALEMBIC=OFF \
-    -DWITH_RAYOPTIMIZATION=ON \
+    -DWITH_ALEMBIC=ON \
     -DWITH_JACK=OFF \
     -DWITH_CODEC_FFMPEG=ON \
     -DWITH_CODEC_SNDFILE=ON \
@@ -166,20 +173,20 @@ build() {
     -DWITH_CYCLES_CUDA_BINARIES=OFF \
     -DWITH_CYCLES_OSL=ON \
     -DWITH_FFTW3=ON \
+    -DWITH_OPENVDB=OFF \
     -DWITH_MEM_JEMALLOC=OFF \
     -DWITH_MOD_OCEANSIM=ON \
     -DPYTHON_VERSION=${_pyver} \
     -DPYTHON_LIBPATH=${MINGW_PREFIX}/lib \
-    -DPYTHON_LIBRARY=python${_pyver}m \
-    -DPYTHON_INCLUDE_DIRS=${MINGW_PREFIX}/include/python${_pyver}m \
+    -DPYTHON_LIBRARY=python${_pyver} \
+    -DPYTHON_INCLUDE_DIRS=${MINGW_PREFIX}/include/python${_pyver} \
     -DWITH_PYTHON_INSTALL=OFF \
     -DWITH_PYTHON_INSTALL_NUMPY=OFF \
-    -DPYTHON_NUMPY_PATH=${MINGW_PREFIX}/lib/python${_pyver}/site-packages \
     -DCYCLES_OSL=${MINGW_PREFIX} \
     -DWITH_OPENMP=ON \
     -DWITH_LLVM=ON \
     -DLLVM_STATIC=ON \
-    ../${_realname}-${_basever}${_minorchar}
+    ../${_realname}-${pkgver}
 
   make
 }
@@ -190,9 +197,9 @@ package() {
   cp -r bin ${pkgdir}${MINGW_PREFIX}/
   rm ${pkgdir}${MINGW_PREFIX}/bin/msgfmt.exe
 
-  ${MINGW_PREFIX}/bin/python3 -m compileall "${pkgdir}${MINGW_PREFIX}/share/blender/${_basever}"
-  ${MINGW_PREFIX}/bin/python3 -m compileall \
-  ${pkgdir}${MINGW_PREFIX}/share/blender/${_basever}/scripts/startup \
-  ${pkgdir}${MINGW_PREFIX}/share/blender/${_basever}/scripts/modules \
-  ${pkgdir}${MINGW_PREFIX}/share/blender/${_basever}/scripts/addons
+  ${MINGW_PREFIX}/bin/python -m compileall "${pkgdir}${MINGW_PREFIX}/share/blender/${pkgver}"
+  ${MINGW_PREFIX}/bin/python -m compileall \
+  ${pkgdir}${MINGW_PREFIX}/share/blender/${pkgver}/scripts/startup \
+  ${pkgdir}${MINGW_PREFIX}/share/blender/${pkgver}/scripts/modules \
+  ${pkgdir}${MINGW_PREFIX}/share/blender/${pkgver}/scripts/addons
 }
