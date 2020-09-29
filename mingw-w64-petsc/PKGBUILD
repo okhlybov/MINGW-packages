@@ -2,27 +2,33 @@
 
 _realname=petsc
 pkgbase=mingw-w64-${_realname}
-pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}") # "${MINGW_PACKAGE_PREFIX}-${_realname}-debug"
-pkgver=3.13.4
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgver=3.13.5
 pkgrel=1
 arch=('any')
 pkgdesc="Sparse iterative (non)linear solver package (mingw-w64)"
-depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs" "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran")
-makedepends=(
-	"python2" "${MINGW_PACKAGE_PREFIX}-gcc" "${MINGW_PACKAGE_PREFIX}-gcc-fortran" "${MINGW_PACKAGE_PREFIX}-msmpi"
-	"${MINGW_PACKAGE_PREFIX}-lapack" "${MINGW_PACKAGE_PREFIX}-openblas"
-	"${MINGW_PACKAGE_PREFIX}-metis" "${MINGW_PACKAGE_PREFIX}-parmetis" "${MINGW_PACKAGE_PREFIX}-ptscotch"
-)
+depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs"
+	     "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran"	
+	     "${MINGW_PACKAGE_PREFIX}-openblas"
+	     "${MINGW_PACKAGE_PREFIX}-parmetis"
+       "${MINGW_PACKAGE_PREFIX}-metis"
+	     "${MINGW_PACKAGE_PREFIX}-scotch"
+	     "${MINGW_PACKAGE_PREFIX}-msmpi")
+makedepends=("python2"
+             "${MINGW_PACKAGE_PREFIX}-gcc"
+             "${MINGW_PACKAGE_PREFIX}-gcc-fortran")
 options=('strip' 'staticlibs')
 license=('2-clause BSD')
 url="https://www.mcs.anl.gov/petsc/"
-source=("http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/${_realname}-lite-${pkgver}.tar.gz")
+source=("http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/${_realname}-lite-${pkgver}.tar.gz"
+	    "0001-fp-exception.patch")
 noextract=("${_realname}-lite-${pkgver}.tar.gz")
-sha256sums=('8d470cba1ceb9638694550134a2f23aac85ed7249cb74992581210597d978b94')
+sha256sums=('10fc542dab961c8b17db35ad3a208cb184c237fc84e183817e38e6c7ab4b8732'
+            '71ea9a69e9cb097739f991a9c5d9035e424e4ee7abc3c59baaeaa7364efd6247')
 
 # Bash tarball extractor function which replaces symlinks with real copies.
 # Useful for platforms which do not handle symlinks well, such as MSYS(2).
-untar() {
+_untar() {
   case "$1" in
     *.tar)
       u=
@@ -55,103 +61,117 @@ untar() {
 
 prepare() {
   mkdir -p $srcdir/build-${MINGW_CHOST} && cd $srcdir/build-${MINGW_CHOST}
-  untar $srcdir/../${_realname}-lite-${pkgver}.tar.gz # bsdtar fails to extract tarballs with symlinks
+  _untar $srcdir/../${_realname}-lite-${pkgver}.tar.gz # bsdtar fails to extract tarballs with symlinks
   cd ${_realname}-${pkgver}
-  for p in ${srcdir}/../*.patch; do
-    patch -p1 < $p
+  for p in ${source[*]:1}; do
+    patch -p1 -i "$srcdir/$p"
   done
 }
 
-obuilds="dso dto dmo zso zto zmo"
-#dbuilds="dsd dtd dmd zsd ztd zmd"
+builds="dso dto dmo zso zto zmo"
+builds=dso
 
-builds="$dbuilds $obuilds"
+_petsc() {
+  opts="--with-single-library=0 --disable-shared --with-windows-graphics=0 --with-x=0 --with-openblas=1 --with-openblas-dir=$MINGW_PREFIX"
+  ld=gfortran
+  pc=openblas
+  iflags=
+  ldflags=
+  desc=
+  case $1 in
+    ?m?)
+      opts="$opts --with-mpi=1 --with-mpi-compilers=1 --with-pthread=0 --with-openmp=0 --with-metis=1 --with-parmetis=1 --with-scotch=1 --with-ptscotch=1"
+      pc="$pc parmetis ptscotch msmpi"
+      ldflags="$ldflags -lptscotchparmetis"
+      ld=mpifort
+      desc="MPI parallel"
+    ;;
+    ?t?)
+      opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=1 --with-metis=1 --with-scotch=1"
+      pc="$pc metis scotch"
+      iflags="$iflags -I\${includedir}/mpiuni"
+      ldflags="-fopenmp $ldflags -lscotchmetis"
+      desc="OpenMP parallel"
+    ;;
+    ?s?)
+      opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=0 --with-metis=1 --with-scotch=1"
+      pc="$pc metis scotch"
+      iflags="$iflags -I\${includedir}/mpiuni"
+      ldflags="$ldflags -lscotchmetis"
+      desc="Sequential"
+    ;;
+  esac
+  case $1 in
+    z*|d*)
+      opts="$opts --with-precision=double"
+      desc="$desc double precision"
+    ;;
+    c*|s*)
+      opts="$opts --with-precision=single"
+      desc="$desc single precision"
+    ;;
+  esac
+  case $1 in
+    d*|s*)
+      opts="$opts --with-scalar-type=real"
+    ;;
+    z*|c*)
+      opts="$opts --with-scalar-type=complex"
+      desc="$desc complex"
+    ;;
+  esac
+  case $1 in
+    *o)
+      opts="$opts --with-debugging=0"
+      cflags="$CFLAGS"
+      cxxflags="$CXXFLAGS"
+      fflags="$CFLAGS"
+      options=('strip' 'staticlibs')
+    ;;
+    *g)
+      opts="$opts --with-debugging=1"
+      debug="-g -Og"
+      cflags="$CFLAGS $debug"
+      cxxflags="$CXXFLAGS $debug"
+      fflags="$CFLAGS $debug"
+      options=('!strip' 'staticlibs')
+    ;;
+  esac
+}
 
 build() {
   cd  "${srcdir}/build-${MINGW_CHOST}/${_realname}-${pkgver}"
   for build in ${builds}; do
-    opts="--with-single-library=0 --disable-shared --with-windows-graphics=0 --with-x=0 --with-openblas=1 --with-openblas-dir=$MINGW_PREFIX"
-    ld=gcc
-    case ${build} in
-      ?m?)
-        opts="$opts --with-mpi=1 --with-mpi-compilers=1 --with-pthread=0 --with-openmp=0 --with-metis=1 --with-parmetis=1 --with-ptscotch=1"
-		ld=mpicc
-      ;;
-      ?s?)
-        opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=0 --with-metis=1"
-        ;;
-      ?t?)
-        opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=1 --with-metis=1"
-        ldflags=-fopenmp
-        ;;
-    esac
-  	case ${build} in
-  	  z*|d*)
-  		opts="$opts --with-precision=double"
-  	  ;;
-  	  c*|s*)
-  		opts="$opts --with-precision=single"
-  	  ;;
-  	esac
-    case ${build} in
-      d*|s*)
-        opts="$opts --with-scalar-type=real"
-      ;;
-      z*|c*)
-        opts="$opts --with-scalar-type=complex"
-      ;;
-    esac
-    case ${build} in
-      *o)
-        opts="$opts --with-debugging=0"
-        cflags="$CFLAGS"
-        cxxflags="$CXXFLAGS"
-        fflags="$CFLAGS"
-      ;;
-      *d)
-        opts="$opts --with-debugging=1"
-        debug="-g -Og"
-        cflags="$CFLAGS $debug"
-        cxxflags="$CXXFLAGS $debug"
-        fflags="$CFLAGS $debug"
-      ;;
-    esac
+    _petsc ${build}
     export PETSC_DIR=`pwd`
-    python2 configure --PETSC_ARCH=${build} ${opts} \
-      CFLAGS="$cflags" FFLAGS="$fflags" CXXFLAGS="$cxxflags" CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" MAKEFLAGS="$MAKEFLAGS"
+    python2 configure --PETSC_ARCH=${build} ${opts} CFLAGS="$cflags" FFLAGS="$fflags" CXXFLAGS="$cxxflags" CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" MAKEFLAGS="$MAKEFLAGS"
     make PETSC_ARCH=${build} all
   	(
-		cd ${build}/lib
-		lib=libpetsc-${build}
-		rm -rf ${lib}.a
-	  case ${build} in
-		*o)
-		  strip -S *.a
-		;;
-	  esac
+  		cd ${build}/lib
+  		lib=libpetsc-${build}
+  		rm -rf ${lib}.a
+  	  case ${build} in
+    		*o) strip -S *.a ;;
+  	  esac
   		ar crsT ${lib}.a libpetscts.a libpetscsnes.a libpetscksp.a libpetscdm.a libpetscmat.a libpetscvec.a libpetscsys.a
-  		${ld} ${ldflags} -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o ${lib}.dll -Wl,--out-implib,${lib}.dll.a -Wl,--whole-archive ${lib}.a -Wl,--no-whole-archive $(pkg-config openblas --libs) -lgfortran
+  		${ld} -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o ${lib}.dll -Wl,--out-implib,${lib}.dll.a -Wl,--whole-archive ${lib}.a -Wl,--no-whole-archive ${ldflags} $(pkg-config ${pc} --libs)
   	)
   done
 }
 
-_package() {
-  if [[ $2 == o ]]; then
-    options=('strip' 'staticlibs')
-  else
-    options=('!strip' 'staticlibs')
-  fi
+package() {
   cd ${srcdir}/build-${MINGW_CHOST}/${_realname}-${pkgver}
   mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,lib/pkgconfig,lib/${_realname},include/${_realname}}
   (
-	cd include
-	cp *.h ${pkgdir}${MINGW_PREFIX}/include/${_realname}
-	cd ${_realname}
-	cp -R finclude mpiuni ${pkgdir}${MINGW_PREFIX}/include/${_realname}
-	cd ${pkgdir}${MINGW_PREFIX}/include/${_realname}
-	find . \( ! -name '*.h' -a -type f \) -delete
+    cd include
+    cp *.h ${pkgdir}${MINGW_PREFIX}/include/${_realname}
+    cd ${_realname}
+    cp -R finclude mpiuni ${pkgdir}${MINGW_PREFIX}/include/${_realname}
+    cd ${pkgdir}${MINGW_PREFIX}/include/${_realname}
+    find . \( ! -name '*.h' -a -type f \) -delete
   )
-  for build in $1; do
+  for build in ${builds}; do
+    _petsc ${build}
   	(
   		cd ${build}/lib
   		mkdir -p ${pkgdir}${MINGW_PREFIX}/lib/${_realname}/${build}
@@ -163,64 +183,19 @@ _package() {
   		mkdir -p ${pkgdir}${MINGW_PREFIX}/include/${_realname}/${build}
   		cp *.{h,mod} ${pkgdir}${MINGW_PREFIX}/include/${_realname}/${build}
   	)
-    impi=
-    rmpi=
-    ldflags=
-  	case ${build} in
-  		?s?)
-  			impi='-I${includedir}/mpiuni'
-  		;;
-      ?t?)
-        ldflags=-fopenmp
-        impi='-I${includedir}/mpiuni'
-      ;;
-  		*)
-  			rmpi='msmpi'
-  		;;
-  	esac
-  	lib=${_realname}-${build}
-  	echo "
-  		prefix=${MINGW_PREFIX}
-  		libdir=\${prefix}/lib/${_realname}
-  		includedir=\${prefix}/include/${_realname}
-  		Name: ${_realname}
-  		URL: ${url}
-  		Version: ${pkgver}
-  		Description: Sparse iterative (non)linear solver package (mingw-w64)
-  		Requires.private: openblas ${rmpi}
-  		Cflags: ${impi} -I\${includedir}/${build} -I\${includedir}
-  		Libs.private: ${ldflags} -L\${libdir}/${build} -l${lib} -lgfortran -lquadmath
-  		Libs: -L\${libdir}/${build} -l${lib}
-  	" | sed '/^\s*$/d;s/^\s*//' > ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/${lib}.pc
+    lib=${_realname}-${build}
+    echo "
+      prefix=${MINGW_PREFIX}
+      libdir=\${prefix}/lib/${_realname}
+      includedir=\${prefix}/include/${_realname}
+      Name: ${_realname}
+      URL: ${url}
+      Version: ${pkgver}
+      Description: ${desc} PETSc library
+      Requires.private: ${pc}
+      Cflags: -I\${includedir}/${build} -I\${includedir} ${iflags}
+      Libs.private: -L\${libdir}/${build} -l${lib} ${ldflags} -lgfortran -lquadmath
+      Libs: -L\${libdir}/${build} -l${lib}
+    " | sed '/^\s*$/d;s/^\s*//' > ${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/${lib}.pc
   done
-}
-
-_package_build() {
-  cd $srcdir/build-${MINGW_CHOST}
-  mkdir -p ${pkgdir}${MINGW_PREFIX}/src
-  cp -R ${_realname}-* ${pkgdir}${MINGW_PREFIX}/src
-}
-
-package_mingw-w64-i686-petsc() {
-	_package "$obuilds" o
-}
-
-package_mingw-w64-x86_64-petsc() {
-	_package "$obuilds" o
-}
-
-package_mingw-w64-i686-petsc-debug() {
-  _package "$dbuilds" d
-}
-
-package_mingw-w64-x86_64-petsc-debug() {
-  _package "$dbuilds" d
-}
-
-_package_mingw-w64-i686-petsc-build() {
-	_package_build
-}
-
-_package_mingw-w64-x86_64-petsc-build() {
-	_package_build
 }
