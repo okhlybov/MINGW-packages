@@ -69,7 +69,6 @@ prepare() {
 }
 
 builds="dso dto dmo zso zto zmo"
-builds=dso
 
 _petsc() {
   opts="--with-single-library=0 --disable-shared --with-windows-graphics=0 --with-x=0 --with-openblas=1 --with-openblas-dir=$MINGW_PREFIX"
@@ -87,14 +86,14 @@ _petsc() {
       desc="MPI parallel"
     ;;
     ?t?)
-      opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=1 --with-metis=1 --with-scotch=1"
+      opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=1"
       pc="$pc metis scotch"
       iflags="$iflags -I\${includedir}/mpiuni"
       ldflags="-fopenmp $ldflags -lscotchmetis"
       desc="OpenMP parallel"
     ;;
     ?s?)
-      opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=0 --with-metis=1 --with-scotch=1"
+      opts="$opts --with-mpi=0 --with-pthread=0 --with-openmp=0"
       pc="$pc metis scotch"
       iflags="$iflags -I\${includedir}/mpiuni"
       ldflags="$ldflags -lscotchmetis"
