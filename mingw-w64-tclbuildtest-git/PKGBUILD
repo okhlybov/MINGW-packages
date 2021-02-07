@@ -1,0 +1,27 @@
+# Contributor: Oleg A. Khlybov <fougas@mail.ru>
+
+_realname=tclbuildtest
+pkgbase="mingw-w64-${_realname}-git"
+pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}-git"
+pkgver=0.1.0.20.076a9fd
+pkgrel=1
+pkgdesc="A TclTest extension to test source code compilation & running (mingw-w64)"
+arch=('any')
+url="https://github.com/okhlybov/tclbuildtest"
+license=("BSD")
+source=(${_realname}::"git+https://github.com/okhlybov/tclbuildtest.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $_realname
+  version=$(echo 'source [file join . tclbuildtest.tcl]; puts [package require tclbuildtest]' | ${TCLSH:-tclsh})
+  revision=$(git rev-list --count HEAD)
+  hash=$(git log --pretty=format:'%h' -n 1)
+  echo ${version}.${revision}.${hash}
+}
+
+package() {
+  cd ${_realname}
+  mkdir -p ${pkgdir}${MINGW_PREFIX}/{bin,share/test}
+  DESTDIR="${pkgdir}" PREFIX="${MINGW_PREFIX}" ./install.sh 
+}
