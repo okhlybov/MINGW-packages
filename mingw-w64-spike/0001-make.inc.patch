@@ -1,0 +1,25 @@
+diff -urN spike-1.0.org/src/make.inc spike-1.0/src/make.inc
+--- spike-1.0.org/src/make.inc	2018-11-07 23:55:16.000000000 +0500
++++ spike-1.0/src/make.inc	2021-02-22 12:23:54.482258200 +0500
+@@ -8,8 +8,8 @@
+ ########### Option 2- Intel Fortran + (any) C Compiler to remove the Fortran runtime library dependencies 
+ #######################################################################
+ 
+-#OPTION = 1
+-OPTION = 2
++OPTION = 1
++#OPTION = 2
+ 
+ ################################################################
+ ########## Select C compiler and flags (mandatory for option #2)
+@@ -28,8 +28,8 @@
+ F90FLAGS = -c -O3 -cpp  -qopenmp -fPIC 
+ 
+ ##F2- Gnu Fortran Compiler
+-#F90 = gfortran 
+-#F90FLAGS = -c -O3 -fopenmp -ffree-line-length-none -ffixed-line-length-none -cpp 
++F90 = gfortran 
++F90FLAGS = -c -O3 -fopenmp -ffree-line-length-none -ffixed-line-length-none -cpp -fallow-argument-mismatch
+ 
+ # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ # !Warning: Spike has not been tested with this compiler!

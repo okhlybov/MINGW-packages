@@ -1,0 +1,16 @@
+source [file join [file dirname [file normalize [info script]]] tclbuildtest.tcl]
+
+package require tclbuildtest
+
+::tclbuildtest::sandbox {
+    foreach b {{} static} {
+        foreach ss {{complex single} {real double}} {
+            test [list c {*}$ss $b] {
+                run [build [require spike openblas] -fopenmp [x]spike_gbsv.c]
+            }
+        }
+        test [list fortran real double $b] {
+            run [build [require spike openblas] -fopenmp driver_[x]spike_gbsv.f90]
+        }
+    }
+}

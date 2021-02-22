@@ -1,0 +1,40 @@
+diff -urN spike-1.0.org/src/dzlbprim.f90 spike-1.0/src/dzlbprim.f90
+--- spike-1.0.org/src/dzlbprim.f90	2018-10-30 04:59:35.000000000 +0500
++++ spike-1.0/src/dzlbprim.f90	2021-02-22 13:57:49.445449900 +0500
+@@ -3242,6 +3242,7 @@
+ 
+ 
+ 
++#if 0
+ subroutine DZGBMM(TRANSA,TRANSB,n,rhs,kl,ku,alpha,A,LDA,B,LDB,beta,C,LDC)
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !  Purpose
+@@ -3358,7 +3359,7 @@
+   endif
+ 
+ end subroutine DZGBMM
+-
++#endif
+ 
+ 
+ 
+diff -urN spike-1.0.org/src/sclbprim.f90 spike-1.0/src/sclbprim.f90
+--- spike-1.0.org/src/sclbprim.f90	2018-10-30 04:59:35.000000000 +0500
++++ spike-1.0/src/sclbprim.f90	2021-02-22 13:57:49.445449900 +0500
+@@ -3259,6 +3259,7 @@
+ 
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ 
++#if 0
+ subroutine SCGBMM(TRANSA,TRANSB,n,rhs,kl,ku,alpha,A,LDA,B,LDB,beta,C,LDC)
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !  Purpose
+@@ -3375,7 +3376,7 @@
+   endif
+ 
+ end subroutine SCGBMM
+-
++#endif
+ 
+ 
+ 
