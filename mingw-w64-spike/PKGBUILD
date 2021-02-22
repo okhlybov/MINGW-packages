@@ -23,11 +23,12 @@ source=("http://www.ecs.umass.edu/~polizzi/spike/spike-${pkgver}.tar.gz"
         "all.tcl"
         "tclbuildtest.tcl"
         "spike.test")
-sha256sums=('e5d665fdb7043043f0799ae3dbe3b37e5b200d1ab7a6f7b2a4e463fd89507fa4'
-            '394a9e6de6147c33881b7935a2a70f4803eea537faf7b8c74b7cb8236c7f1f87'
+sha256sums=('f80166f116db17b5d8492b2e1d4ddf54d27070cb99a11391b848a472a414379e'
+            '99cad7f36eda14e17c6ccc2050e13a63d09157424db7e63496c645ff80f8d56b'
+            '61447064a83a07479905519f410779811335653a34cf88a9c97b95e96d51cc77'
             'ec5072630e1c0309fe383669e9187790cd135a393c67bc4bc35cf60b0ba396ff'
             '15c7af25b91406d5fe5f26cfe00963b6cfde1c3dd466eb25f1b6fae299934966'
-            '0b58c5bb34403a69bc4c4ab1ab551876695bff1f2be66ecaa9b5528a74e8f8f6')
+            '954bf00e703e2cdcaad84dedd80b2744f77037a3209eb8d671928e55d8589622')
 
 prepare() {
   cd "${srcdir}/${_realname}-${pkgver}"
