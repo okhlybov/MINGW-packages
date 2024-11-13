@@ -38,15 +38,15 @@ url="https://mumps-solver.org"
 license=('spdx:CECILL-C')
 depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs"
          $([[ ${MINGW_PACKAGE_PREFIX} == *-clang-* ]] || echo "${MINGW_PACKAGE_PREFIX}-gcc-libgfortran")
-         "${MINGW_PACKAGE_PREFIX}-openblas"
-         "${MINGW_PACKAGE_PREFIX}-metis"
-         "${MINGW_PACKAGE_PREFIX}-parmetis"
-         "${MINGW_PACKAGE_PREFIX}-scotch"
-         "${MINGW_PACKAGE_PREFIX}-scalapack")
+         "${MINGW_PACKAGE_PREFIX}-openblas64"
+#         "${MINGW_PACKAGE_PREFIX}-metis"
+#         "${MINGW_PACKAGE_PREFIX}-parmetis"
+         "${MINGW_PACKAGE_PREFIX}-scotch-int64")
+#         "${MINGW_PACKAGE_PREFIX}-scalapack")
 makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
              "${MINGW_PACKAGE_PREFIX}-fc"
-             "${MINGW_PACKAGE_PREFIX}-pkgconf"
-             "${MINGW_PACKAGE_PREFIX}-msmpi")
+             "${MINGW_PACKAGE_PREFIX}-pkgconf")
+#             "${MINGW_PACKAGE_PREFIX}-msmpi")
 optdepends=("${MINGW_PACKAGE_PREFIX}-tcl: build & run test suite")
 source=("https://mumps-solver.org/MUMPS_${pkgver}.tar.gz"
         "0001-makefile.inc.patch"
@@ -57,7 +57,7 @@ source=("https://mumps-solver.org/MUMPS_${pkgver}.tar.gz"
         "buildme-0.tm"
         "xyz-0.tm")
 sha256sums=('84a47f7c4231b9efdf4d4f631a2cae2bdd9adeaabc088261d15af040143ed112'
-            'd4e3d06c316544304ac6fefd595f20fd5865e791c9377e031fbad49b6238406c'
+            'c673663d49550a28ff7d610b7025b13e573b96c63da6ab550ca195cacd70f32f'
             'bbefd4a5f841536132f32c1ffc684a58b778901cd777445ca817dbb34d983450'
             '11609d173fc0df7b1d7269c19d5d81b2fd05a3abc57eff8ba12de1597242236c'
             'aa8cc50e447eebb14492744c8be6bd8f731e0140c339a76cc31e54ea2f11813d'
@@ -81,9 +81,10 @@ prepare() {
     "0003-fix-setenv.patch"
 }
 
-seq_pc="metis scotch openblas"
+seq_pc="scotch openblas64"
+#seq_pc="metis scotch openblas"
 shm_pc=$seq_pc
-mpi_pc="parmetis metis ptscotch scalapack openblas msmpi" # FIXME metis should come from parmetis
+#mpi_pc="parmetis metis ptscotch scalapack openblas msmpi" # FIXME metis should come from parmetis
 
 build() {
   cd "${srcdir}/${_realname}_${pkgver}"
@@ -93,7 +94,7 @@ build() {
   else
     export FC=flang
   fi
-  for mod in SEQ SHM PAR; do
+  for mod in SEQ SHM; do
     cp Makefile.inc.${mod} Makefile.inc
     make -j1 clean s d c z
     if [[ $mod == SEQ ]]; then
@@ -104,14 +105,14 @@ build() {
   cd lib
   rm -rf libmumps-*.a
   strip -S *.a # Thin archives require the constituent archives to be stripped beforehand
-  for x in c z s d; do
+  for x in s d c z; do
     ar crsT libmumps-${x}so.a lib${x}mumps_seq.a libmumps_common_seq.a libmumps_pord.a libmumps_mpi_seq.a
     ar crsT libmumps-${x}to.a lib${x}mumps_shm.a libmumps_common_shm.a libmumps_pord.a libmumps_mpi_seq.a
-    ar crsT libmumps-${x}mo.a lib${x}mumps_mpi.a libmumps_common_mpi.a libmumps_pord.a
+#    ar crsT libmumps-${x}mo.a lib${x}mumps_mpi.a libmumps_common_mpi.a libmumps_pord.a
     # TODO export only the required driver routine to reduce the exported symbol table size
     ${FC} -shared -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}so.dll -Wl,--out-implib,libmumps-${x}so.dll.a -Wl,--whole-archive libmumps-${x}so.a -Wl,--no-whole-archive -lesmumps $(pkg-config ${seq_pc} --libs)
     ${FC} -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}to.dll -Wl,--out-implib,libmumps-${x}to.dll.a -Wl,--whole-archive libmumps-${x}to.a -Wl,--no-whole-archive -lesmumps $(pkg-config ${shm_pc} --libs)
-    mpifort -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}mo.dll -Wl,--out-implib,libmumps-${x}mo.dll.a -Wl,--whole-archive libmumps-${x}mo.a -Wl,--no-whole-archive -lptesmumps $(pkg-config ${mpi_pc} --libs)
+#    mpifort -shared -fopenmp -Wl,--enable-auto-import -Wl,--export-all-symbols -o libmumps-${x}mo.dll -Wl,--out-implib,libmumps-${x}mo.dll.a -Wl,--whole-archive libmumps-${x}mo.a -Wl,--no-whole-archive -lptesmumps $(pkg-config ${mpi_pc} --libs)
   done
 }
 
@@ -185,6 +186,6 @@ package() {
       Requires.private: ${mpi_pc}
       Libs.private: -fopenmp -lmumps-${x}mo -lptesmumps ${_fc_libs}
       Libs: -lmumps-${x}mo
-    " | sed '/^\s*$/d;s/^\s*//' > "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/${_realname}-${x}mo.pc"
+    " | sed '/^\s*$/d;s/^\s*//' > /dev/null # "${pkgdir}${MINGW_PREFIX}/lib/pkgconfig/${_realname}-${x}mo.pc"
   done
 }
